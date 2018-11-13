@@ -16,6 +16,8 @@
 #include <map>
 #include <iostream>
 
+#include <unistd.h>
+
 #define PI 3.14159265358979
 
 
@@ -576,6 +578,8 @@ void drawBVHEndSite(EndSite* current) {
 	glPopMatrix();
 }
 
+std::vector<BVH*> interpolated;
+
 void drawBVHJoint(Joint* current) {
 	glPushMatrix();
 
@@ -629,9 +633,44 @@ void drawBVHJoint(Joint* current) {
 	glPopMatrix();
 }
 
+int drawIdx = 0;
 
 void drawBVH() {
-	BVH* current = bvh;
+//	BVH* current = bvh;
+	BVH* current = interpolated[drawIdx++];
+	if (drawIdx == interpolated.size()) drawIdx = 0;
+//	usleep(1000);
+
+	printf("drawIdx = %d / %d\n",drawIdx,(int)interpolated.size());
+	printf("# of joints = %d\n",(int)current -> joints.size());
+
+	std::vector<float> fc(6);
+	for (int i = 0; i < current->channelCount; i++) {
+		switch(current->channelOrder[i]) {
+			case 0:
+				fc[0] = current->rotation[0];
+				break;
+			case 1:
+				fc[1] = current->rotation[1];
+				break;
+			case 2:
+				fc[2] = current->rotation[2];
+				break;
+			case 3:
+				fc[3] = current->offset[0];
+				break;
+			case 4:
+				fc[4] = current->offset[1];
+				break;
+			case 5:
+				fc[5] = current->offset[2];
+				break;
+			default:
+				std::cout << "[ERROR] i = " << i << std::endl;
+				break;
+		}
+	}
+	frameCur = fc;
 
     /* hw2
 	timeCur = glutGet(GLUT_ELAPSED_TIME);
@@ -650,7 +689,7 @@ void drawBVH() {
 		selectedJoint = jointMap.find(camera.selectedJointName)->second;
 	}
 		
-	ik(selectedJoint); // set current frame's channel in hw3
+//	ik(selectedJoint); // set current frame's channel in hw3
 
 
 
@@ -675,6 +714,7 @@ void drawBVH() {
 	glTranslatef(current->offset[0], current->offset[1], current->offset[2]);
 
 	for(int i = 0; i < current->channelCount; i++) {
+		printf("jointIndex = %d\n",(int)jointIndex);
 		switch(current->channelOrder[i]) {
 			case 0:
 				glRotatef(frameCur[jointIndex++], 1.0f, 0.0f, 0.0f);
@@ -725,6 +765,8 @@ void drawBVH() {
 	glutSwapBuffers();
 	//std::cout << camera.movement.x << " " << camera.movement.y << " " << camera.movement.z << std::endl;
 	camera.movement = glm::vec3(0.0f, 0.0f, 0.0f);
+
+//	glutPostRedisplay();
 }
 
 
@@ -739,6 +781,72 @@ void jointMapping(Joint* current) {
 
 }
 
+EndSite* sumTwoEndsite(EndSite* a, EndSite* b, double w) {
+	EndSite* ret = new EndSite();
+	ret = a;
+	for(int i = 0; i < 3; i++) {
+		ret->offset[i] = a->offset[i] * (1.0 - w) + b->offset[i] * w;
+	}
+	return ret;
+}
+
+Joint* sumTwoJoint(Joint* a, Joint* b, double w) {
+	Joint* ret = new Joint(a->name);
+	ret = a;
+	for(int i = 0; i < 3; i++) {
+		ret->offset[i] = a->offset[i] * (1.0 - w) + b->offset[i] * w;
+		ret->rotation[i] = a->rotation[i] * (1.0 - w) + b->rotation[i] * w;
+	}
+	for(int i = 0; i < a->joints.size(); i++) {
+		ret->joints[i] = sumTwoJoint(a->joints[i], b->joints[i], w);
+	}
+	for(int i = 0; i < a->ends.size(); i++) {
+		ret->ends[i] = sumTwoEndsite(a->ends[i], b->ends[i], w);
+	}
+	return ret;
+}
+
+BVH* sumTwoBVH(BVH* a, BVH* b, double w) {
+	BVH* ret = new BVH(a->name);
+	ret = a;
+	for(int i = 0; i < 3; i++) {
+		ret->offset[i] = a->offset[i] * (1.0 - w) + b->offset[i] * w;
+		ret->position[i] = a->position[i] * (1.0 - w) + b->position[i] * w;
+		ret->rotation[i] = a->rotation[i] * (1.0 - w) + b->position[i] * w;
+	}
+	for(int i = 0; i < a->joints.size(); i++) {
+		ret->joints[i] = sumTwoJoint(a->joints[i], b->joints[i], w);
+	}
+	for(int i = 0; i < a->ends.size(); i++) {
+		ret->ends[i] = sumTwoEndsite(a->ends[i], b->ends[i], w);
+	}
+/*	
+	for(int i = 0; i < 6; i++) {
+		ret->channelOrder[i] = a->channelOrder[i];
+	}
+	ret->channelCount = a->channelCount;
+	ret->channelCountAll = a->channelCountAll;
+	ret->channelNum = a->channelNum;
+	for(int i = 0; i < a->joints.size(); i++) {
+		Joint* newJoint = sumTwoJoint(a->joints[i], b->joints[i], w);
+		ret->joints.push_back(newJoint);
+	}
+*/	
+	return ret;
+}
+
+std::vector<BVH*> interpolateFrames(BVH* a, BVH* b, int frameCount = 60) {
+	assert(a->joints.size() == b->joints.size());
+	std::vector<BVH*> ret;
+	int jointsN = a->joints.size();
+	const double Pi = acos(-1.0);
+	for(int t = 0; t < frameCount; t++) {
+		double w = cos(PI / frameCount * t) / 2.0 + 1.0 / 2.0;
+		BVH *cur = sumTwoBVH(a, b, w);
+		ret.push_back(cur);
+	}
+	return ret;
+}
 
 // 메인 함수
 int main(int argc, char **argv) {
@@ -747,19 +855,35 @@ int main(int argc, char **argv) {
 
 	char fileName[30] = "MotionData/Trial001.bvh";
 	Parser parser;
+
+	BVH *bvh1, *bvh2;
+	char file1[50] = "MotionData/walk_fast_stright.bvh";
+	char file2[50] = "MotionData/Trial004.bvh";
+	bvh1=parser.parse(file1);
+	bvh2=parser.parse(file2);
+
+	interpolated = interpolateFrames(bvh1, bvh2);
+	bvh = interpolated[drawIdx];
+
+	/*
+
 	if (argc == 1) {
 		bvh = parser.parse(fileName);
 	} else {
 		bvh = parser.parse(argv[1]);
 	}
+*/
 	for(Joint* joint : bvh->joints) {
 		jointMapping(joint);
 	}
+	/*
 	//init
 	frameCur = bvh->frames[0];
 	std::cout << bvh->name << " " << frameCur[0] << " " << frameCur[1] << " " << frameCur[2] << std::endl;
+	*/
 	selectedJoint = jointMap.find("thorax")->second;
 
+	
 	glutInit(&argc, argv);
 
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
