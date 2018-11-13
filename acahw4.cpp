@@ -634,17 +634,19 @@ void drawBVHJoint(Joint* current) {
 }
 
 int drawIdx = 0;
+std::vector<std::vector<float> > frames;
 
 void drawBVH() {
-//	BVH* current = bvh;
-	BVH* current = interpolated[drawIdx++];
-	if (drawIdx == interpolated.size()) drawIdx = 0;
+	BVH* current = bvh;
+	printf("frames sz = %d\n",(int)frames.size());
+	frameCur = frames[drawIdx++];
+	printf("frameCur sz = %d\n",(int)frameCur.size());
+	if (drawIdx == frames.size()) drawIdx = 0;
+//	BVH* current = interpolated[drawIdx++];
+//	if (drawIdx == interpolated.size()) drawIdx = 0;
 //	usleep(1000);
 
-	printf("drawIdx = %d / %d\n",drawIdx,(int)interpolated.size());
-	printf("# of joints = %d\n",(int)current -> joints.size());
-
-	std::vector<float> fc(6);
+	/*
 	for (int i = 0; i < current->channelCount; i++) {
 		switch(current->channelOrder[i]) {
 			case 0:
@@ -670,7 +672,8 @@ void drawBVH() {
 				break;
 		}
 	}
-	frameCur = fc;
+
+	*/
 
     /* hw2
 	timeCur = glutGet(GLUT_ELAPSED_TIME);
@@ -684,10 +687,11 @@ void drawBVH() {
 
     /* hw3 */
 	//frameCur recalculate by jacobian
+	/*
 	if(selectedJoint->name.compare(camera.selectedJointName) != 0) {
 		std::cout << camera.selectedJointName << std::endl;
 		selectedJoint = jointMap.find(camera.selectedJointName)->second;
-	}
+	}*/
 		
 //	ik(selectedJoint); // set current frame's channel in hw3
 
@@ -835,14 +839,16 @@ BVH* sumTwoBVH(BVH* a, BVH* b, double w) {
 	return ret;
 }
 
-std::vector<BVH*> interpolateFrames(BVH* a, BVH* b, int frameCount = 60) {
+std::vector<std::vector<float> > interpolateFrames(BVH* a, BVH* b, int frameCount = 60) {
 	assert(a->joints.size() == b->joints.size());
-	std::vector<BVH*> ret;
-	int jointsN = a->joints.size();
+	std::vector<std::vector<float> > ret;
 	const double Pi = acos(-1.0);
+	printf("a joints = %d, frame = %d\n",(int)a->joints.size(),(int)a->frames[0].size());
 	for(int t = 0; t < frameCount; t++) {
 		double w = cos(PI / frameCount * t) / 2.0 + 1.0 / 2.0;
-		BVH *cur = sumTwoBVH(a, b, w);
+		std::vector<float> cur;
+		for(int j = 0; j < a->frames.back().size(); j++)
+			cur.push_back(a->frames.back()[j] * (1.0 - w) + b->frames[0][j] * w);
 		ret.push_back(cur);
 	}
 	return ret;
@@ -861,27 +867,25 @@ int main(int argc, char **argv) {
 	char file2[50] = "MotionData/Trial004.bvh";
 	bvh1=parser.parse(file1);
 	bvh2=parser.parse(file2);
-
-	interpolated = interpolateFrames(bvh1, bvh2);
-	bvh = interpolated[drawIdx];
+	
+	bvh = bvh1;
 
 	/*
-
 	if (argc == 1) {
 		bvh = parser.parse(fileName);
 	} else {
 		bvh = parser.parse(argv[1]);
 	}
-*/
+	*/
 	for(Joint* joint : bvh->joints) {
 		jointMapping(joint);
 	}
-	/*
 	//init
-	frameCur = bvh->frames[0];
-	std::cout << bvh->name << " " << frameCur[0] << " " << frameCur[1] << " " << frameCur[2] << std::endl;
-	*/
-	selectedJoint = jointMap.find("thorax")->second;
+	//
+//	frameCur = bvh->frames[0];
+	frames = interpolateFrames(bvh1, bvh2);
+//	std::cout << bvh->name << " " << frameCur[0] << " " << frameCur[1] << " " << frameCur[2] << std::endl;
+//	selectedJoint = jointMap.find("thorax")->second;
 
 	
 	glutInit(&argc, argv);
