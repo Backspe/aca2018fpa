@@ -841,14 +841,18 @@ BVH* sumTwoBVH(BVH* a, BVH* b, double w) {
 
 std::vector<std::vector<float> > interpolateFrames(BVH* a, BVH* b, int frameCount = 60) {
 	assert(a->joints.size() == b->joints.size());
+	printf("a : %d, b : %d\n", a->frameCount, b->frameCount);	
 	std::vector<std::vector<float> > ret;
 	const double Pi = acos(-1.0);
-	printf("a joints = %d, frame = %d\n",(int)a->joints.size(),(int)a->frames[0].size());
+	printf("a joints = %d, frame = %d\n",(int)a->joints.size(),(int)a->frames.back().size());
+	printf("a joints = %d, frame = %d\n",(int)a->joints.size(),(int)a->frames.back().size());
 	for(int t = 0; t < frameCount; t++) {
-		double w = cos(PI / frameCount * t) / 2.0 + 1.0 / 2.0;
+		double w = 1 - (cos(PI / frameCount * t) / 2.0 + 1.0 / 2.0);
 		std::vector<float> cur;
-		for(int j = 0; j < a->frames.back().size(); j++)
-			cur.push_back(a->frames.back()[j] * (1.0 - w) + b->frames[0][j] * w);
+		for(int j = 0; j < a->frames.back().size(); j++) {
+			if (j == 0 || j == 2) cur.push_back(a->frames.back()[j]);
+			else cur.push_back(a->frames.back()[j] * (1.0 - w) + b->frames[60][j] * w);
+		}
 		ret.push_back(cur);
 	}
 	return ret;
@@ -860,13 +864,14 @@ int main(int argc, char **argv) {
 	initParam();
 
 	char fileName[30] = "MotionData/Trial001.bvh";
-	Parser parser;
+	Parser parser1, parser2;
 
 	BVH *bvh1, *bvh2;
-	char file1[50] = "MotionData/walk_fast_stright.bvh";
-	char file2[50] = "MotionData/Trial004.bvh";
-	bvh1=parser.parse(file1);
-	bvh2=parser.parse(file2);
+	//char file1[50] = "cmu/16_57_run&jog, sudden stop.bvh";
+	char file1[50] = "cmu/16_15_walk.bvh";
+	char file2[50] = "cmu/16_01_jump.bvh";
+	bvh1=parser1.parse(file1);
+	bvh2=parser2.parse(file2);
 	
 	bvh = bvh1;
 
@@ -883,7 +888,7 @@ int main(int argc, char **argv) {
 	//init
 	//
 //	frameCur = bvh->frames[0];
-	frames = interpolateFrames(bvh1, bvh2);
+	frames = interpolateFrames(bvh1, bvh2, 240);
 //	std::cout << bvh->name << " " << frameCur[0] << " " << frameCur[1] << " " << frameCur[2] << std::endl;
 //	selectedJoint = jointMap.find("thorax")->second;
 
