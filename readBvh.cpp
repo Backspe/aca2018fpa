@@ -142,7 +142,7 @@ void Parser::parseMotion(BVH* root) {
 	nextToken();
 }
 
-BVH* Parser::parse(char* fileName) {
+BVH* Parser::parse(const char* fileName) {
 	printf("start reading file %s\n", fileName);
 	std::ifstream ifs(fileName);
 	if (ifs.fail()) {

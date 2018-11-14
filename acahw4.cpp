@@ -1,5 +1,6 @@
 #include "readBvh.h"
 #include "camera.h"
+#include "fsm.h"
 
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
@@ -61,6 +62,8 @@ const double toesRad = 0.75;
 // 각도 관련 변수
 
 Camera camera = Camera();
+
+FSM fsm = FSM();
 
 BVH* bvh;
 std::map< std::string, Joint* > jointMap;
@@ -638,10 +641,12 @@ std::vector<std::vector<float> > frames;
 
 void drawBVH() {
 	BVH* current = bvh;
-	printf("frames sz = %d\n",(int)frames.size());
 	frameCur = frames[drawIdx++];
-	printf("frameCur sz = %d\n",(int)frameCur.size());
 	if (drawIdx == frames.size()) drawIdx = 0;
+
+	fsm.idle();
+	printf("state: %d->%d, frameIndex: %d/%lu, command: '%c'\n", fsm.stateCur, fsm.stateNext, fsm.frameIndex, fsm.motions[fsm.stateCur].size(), Camera::command);
+	frameCur = fsm.getFrame();
 //	BVH* current = interpolated[drawIdx++];
 //	if (drawIdx == interpolated.size()) drawIdx = 0;
 //	usleep(1000);
@@ -718,7 +723,6 @@ void drawBVH() {
 	glTranslatef(current->offset[0], current->offset[1], current->offset[2]);
 
 	for(int i = 0; i < current->channelCount; i++) {
-		printf("jointIndex = %d\n",(int)jointIndex);
 		switch(current->channelOrder[i]) {
 			case 0:
 				glRotatef(frameCur[jointIndex++], 1.0f, 0.0f, 0.0f);

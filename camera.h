@@ -38,6 +38,7 @@ public:
 	static vec3 movement;
 	static std::string selectedJointName;
 	static int maxDepth;
+	static char command;
 };
 
 #endif

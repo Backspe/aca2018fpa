@@ -82,7 +82,7 @@ public:
 	BVH* parseRoot();
 	Joint* parseJoint(int chan_num);
 	void parseMotion(BVH* root);
-	BVH* parse(char* fileName);
+	BVH* parse(const char* fileName);
 };
 
 #endif
