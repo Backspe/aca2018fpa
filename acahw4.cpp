@@ -839,19 +839,35 @@ BVH* sumTwoBVH(BVH* a, BVH* b, double w) {
 	return ret;
 }
 
-std::vector<std::vector<float> > interpolateFrames(BVH* a, BVH* b, int frameCount = 60) {
+std::vector<std::vector<float> > interpolateFrames(BVH* a, BVH* b, int cntA, int cntB, int frameCount = 60) {
 	assert(a->joints.size() == b->joints.size());
-	printf("a : %d, b : %d\n", a->frameCount, b->frameCount);	
+	assert(1 <= cntA && cntA <= a->frames.size());
+	assert(1 <= cntB && cntB <= b->frames.size());
+	std::vector<std::vector<float> > aFrame, bFrame;
+	for (int i = (int)a->frames.size() - cntA; i < (int)a->frames.size(); i++) {
+		aFrame.push_back(a->frames[i]);
+	}
+	for (int i = 0; i < cntB; i++) {
+		bFrame.push_back(b->frames[i]);
+	}
+	if (aFrame.empty()) aFrame.push_back(a->frames.back());
+	if (bFrame.empty()) bFrame.push_back(b->frames[0]);
 	std::vector<std::vector<float> > ret;
 	const double Pi = acos(-1.0);
-	printf("a joints = %d, frame = %d\n",(int)a->joints.size(),(int)a->frames.back().size());
-	printf("a joints = %d, frame = %d\n",(int)a->joints.size(),(int)a->frames.back().size());
 	for(int t = 0; t < frameCount; t++) {
-		double w = 1 - (cos(PI / frameCount * t) / 2.0 + 1.0 / 2.0);
+		double w = 1 - (cos(Pi / frameCount * t) / 2.0 + 1.0 / 2.0);
+		int aid = 1.0*t / frameCount * aFrame.size(), bid = 1.0*t / frameCount * bFrame.size();
+		if (aid >= aFrame.size()) aid = aFrame.size() - 1;
+		if (bid >= bFrame.size()) bid = bFrame.size() - 1;
 		std::vector<float> cur;
+		/*
 		for(int j = 0; j < a->frames.back().size(); j++) {
 			if (j == 0 || j == 2) cur.push_back(a->frames.back()[j]);
 			else cur.push_back(a->frames.back()[j] * (1.0 - w) + b->frames[60][j] * w);
+		}*/
+		for (int j = 0; j < aFrame[aid].size(); j++) {
+			if (j == 0 || j == 2) cur.push_back(aFrame[aid][j]);
+			else cur.push_back(aFrame[aid][j] * (1.0 - w) + bFrame[bid][j] * w);
 		}
 		ret.push_back(cur);
 	}
@@ -868,7 +884,7 @@ int main(int argc, char **argv) {
 
 	BVH *bvh1, *bvh2;
 	//char file1[50] = "cmu/16_57_run&jog, sudden stop.bvh";
-	char file1[50] = "cmu/16_15_walk.bvh";
+	char file1[50] = "cmu/16_57_run&jog, sudden stop.bvh";
 	char file2[50] = "cmu/16_01_jump.bvh";
 	bvh1=parser1.parse(file1);
 	bvh2=parser2.parse(file2);
@@ -888,7 +904,7 @@ int main(int argc, char **argv) {
 	//init
 	//
 //	frameCur = bvh->frames[0];
-	frames = interpolateFrames(bvh1, bvh2, 240);
+	frames = interpolateFrames(bvh1, bvh2, 10, 10, 120);
 //	std::cout << bvh->name << " " << frameCur[0] << " " << frameCur[1] << " " << frameCur[2] << std::endl;
 //	selectedJoint = jointMap.find("thorax")->second;
 
