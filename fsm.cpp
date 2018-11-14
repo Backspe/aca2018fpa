@@ -55,17 +55,6 @@ FSM::FSM() {
 		Parser parser;
 		bvhs.push_back(parser.parse(stateFile[i]));
 		motions.push_back(bvhs[i]->frames);
-		if (motions[i].size() > 20) {
-			interpolateFrameTable[i][1] = motions[i].size() - 20;
-		} else {
-			interpolateFrameTable[i][1] = motions[i].size() - 1;
-		}
-		if (motions[i].size() > 20) {
-			interpolateFrameTable[i][0] = 20;
-		} else {
-			interpolateFrameTable[i][0] = 1;
-		}
-		//TODO 노가다로 바꿔야 함
 	}
 	frameIndex = 0;
 	stateCur = STAND;

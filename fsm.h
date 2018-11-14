@@ -19,21 +19,22 @@ enum State {
 
 const char stateFile[STATE_NUM][50] = {
 		"MotionData/STAND.bvh",
-		"MotionData/JUMP1.bvh",
-		"MotionData/JUMP2.bvh",
-		"MotionData/START.bvh",
-		"MotionData/STOP.bvh",
-		"MotionData/STRAIGHT1.bvh",
-		"MotionData/LEFT1.bvh",
-		"MotionData/RIGHT1.bvh",
-		"MotionData/STRAIGHT2.bvh",
-		"MotionData/LEFT2.bvh",
-		"MotionData/RIGHT2.bvh",
-		"MotionData/STRAIGHT3.bvh",
-		"MotionData/LEFT3.bvh",
-		"MotionData/RIGHT3.bvh",
-		"MotionData/BREAK.bvh"
+		"MotionData/JUMP1_cut.bvh",
+		"MotionData/JUMP2_cut.bvh",
+		"MotionData/START_cut.bvh",
+		"MotionData/STOP_cut.bvh",
+		"MotionData/STRAIGHT1_cut.bvh",
+		"MotionData/LEFT1_cut.bvh",
+		"MotionData/RIGHT1_cut.bvh",
+		"MotionData/STRAIGHT2_cut.bvh",
+		"MotionData/LEFT2_cut.bvh",
+		"MotionData/RIGHT2_cut.bvh",
+		"MotionData/STRAIGHT3_cut.bvh",
+		"MotionData/LEFT3_cut.bvh",
+		"MotionData/RIGHT3_cut.bvh",
+		"MotionData/BREAK_cut.bvh"
 };
+
 
 class FSM {
 public:
@@ -43,7 +44,24 @@ public:
 	bool isInterpolate;
 	Motion interMotion;
 	glm::mat4 offset;
-	int interpolateFrameTable[STATE_NUM][2]; //이전 state의 몇번째 프레임부터 인터폴레이트하고 나중 스테이트의 몇 프레임까지를 interpolate할 지 저장하는 테이블
+	const char interpolateFrameTable[STATE_NUM][2]= {
+		{1, 4},
+		{15, 65},
+		{20, 70},
+		{10, 67},
+		{33, 40},
+		{31, 38},
+		{33, 67},
+		{34, 76}, 
+		{26, 29},
+		{22, 29},
+		{24, 28},
+		{23, 25},
+		{12, 17},
+		{22, 28},
+		{20, 48}
+	};
+	//int interpolateFrameTable[STATE_NUM][2]; //이전 state의 몇번째 프레임부터 인터폴레이트하고 나중 스테이트의 몇 프레임까지를 interpolate할 지 저장하는 테이블
 	std::vector< Motion > motions;
 	std::vector< BVH* > bvhs;
 
