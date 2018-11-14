@@ -843,18 +843,16 @@ BVH* sumTwoBVH(BVH* a, BVH* b, double w) {
 	return ret;
 }
 
-std::vector<std::vector<float> > interpolateFrames(BVH* a, BVH* b, double overlapRatio = -1.0, int frameCount = 60) {
+std::vector<std::vector<float> > interpolateFrames(BVH* a, BVH* b, int cntA, int cntB, int frameCount = 60) {
 	assert(a->joints.size() == b->joints.size());
-	assert(overlapRatio <= 1.0);
+	assert(1 <= cntA && cntA <= a->frames.size());
+	assert(1 <= cntB && cntB <= b->frames.size());
 	std::vector<std::vector<float> > aFrame, bFrame;
-	if (overlapRatio >= 0.0) {
-		int cntA = a->frameCount * overlapRatio, cntB = b->frameCount * overlapRatio;
-		for (int i = (int)a->frames.size() - cntA; i < (int)a->frames.size(); i++) {
-			aFrame.push_back(a->frames[i]);
-		}
-		for (int i = 0; i < cntB; i++) {
-			bFrame.push_back(b->frames[i]);
-		}
+	for (int i = (int)a->frames.size() - cntA; i < (int)a->frames.size(); i++) {
+		aFrame.push_back(a->frames[i]);
+	}
+	for (int i = 0; i < cntB; i++) {
+		bFrame.push_back(b->frames[i]);
 	}
 	if (aFrame.empty()) aFrame.push_back(a->frames.back());
 	if (bFrame.empty()) bFrame.push_back(b->frames[0]);
@@ -890,7 +888,7 @@ int main(int argc, char **argv) {
 
 	BVH *bvh1, *bvh2;
 	//char file1[50] = "cmu/16_57_run&jog, sudden stop.bvh";
-	char file1[50] = "cmu/16_15_walk.bvh";
+	char file1[50] = "cmu/16_57_run&jog, sudden stop.bvh";
 	char file2[50] = "cmu/16_01_jump.bvh";
 	bvh1=parser1.parse(file1);
 	bvh2=parser2.parse(file2);
@@ -910,7 +908,7 @@ int main(int argc, char **argv) {
 	//init
 	//
 //	frameCur = bvh->frames[0];
-	frames = interpolateFrames(bvh1, bvh2, 0.1, 120);
+	frames = interpolateFrames(bvh1, bvh2, 10, 10, 120);
 //	std::cout << bvh->name << " " << frameCur[0] << " " << frameCur[1] << " " << frameCur[2] << std::endl;
 //	selectedJoint = jointMap.find("thorax")->second;
 
