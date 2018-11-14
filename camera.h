@@ -16,7 +16,6 @@ using namespace glm;
 class Camera {
 
 private:
-	static vec3 cov;
 	static vec3 cameraPlaneVec;
 	static float cameraDistance;
 	static vec3 cameraUpVec;
@@ -30,6 +29,7 @@ private:
 	static float movementScale;
 
 public:
+	static vec3 cov;
 	static void resize(int w, int h);
 	static void mouseDragHandler(int x, int y);
 	static void mouseHandler(int button, int state, int x, int y);

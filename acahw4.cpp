@@ -641,12 +641,21 @@ std::vector<std::vector<float> > frames;
 
 void drawBVH() {
 	BVH* current = bvh;
-	frameCur = frames[drawIdx++];
-	if (drawIdx == frames.size()) drawIdx = 0;
+	//frameCur = frames[drawIdx++];
+	//if (drawIdx == frames.size()) drawIdx = 0;
 
 	fsm.idle();
-	printf("state: %d->%d, frameIndex: %d/%lu, command: '%c'\n", fsm.stateCur, fsm.stateNext, fsm.frameIndex, fsm.motions[fsm.stateCur].size(), Camera::command);
+	if(fsm.isInterpolate) {
+		printf("state: %d->%d, frameIndex: %d/%lu, command: '%c'\n", fsm.stateCur, fsm.stateNext, fsm.frameIndex, fsm.getFrame().size(), Camera::command);
+	} else {
+		printf("state: %d, frameIndex: %d/%lu, command: '%c'\n", fsm.stateCur, fsm.frameIndex, fsm.motions[fsm.stateCur].size(), Camera::command);
+	}
 	frameCur = fsm.getFrame();
+	for(int i = 0; i < 6; i++) {
+		frameCur[i] += fsm.offset[i];
+	}
+	frameCur[0] = 0;
+	frameCur[2] = 0;
 //	BVH* current = interpolated[drawIdx++];
 //	if (drawIdx == interpolated.size()) drawIdx = 0;
 //	usleep(1000);
@@ -732,7 +741,8 @@ void drawBVH() {
 				break;
 			case 2:
 				glRotatef(frameCur[jointIndex++], 0.0f, 0.0f, 1.0f);
-				break; case 3:
+				break; 
+			case 3:
 				glTranslatef(frameCur[jointIndex++], 0.0f, 0.0f);
 				break;
 			case 4:
@@ -843,41 +853,6 @@ BVH* sumTwoBVH(BVH* a, BVH* b, double w) {
 	return ret;
 }
 
-std::vector<std::vector<float> > interpolateFrames(BVH* a, BVH* b, int cntA, int cntB, int frameCount = 60) {
-	assert(a->joints.size() == b->joints.size());
-	assert(1 <= cntA && cntA <= a->frames.size());
-	assert(1 <= cntB && cntB <= b->frames.size());
-	std::vector<std::vector<float> > aFrame, bFrame;
-	for (int i = (int)a->frames.size() - cntA; i < (int)a->frames.size(); i++) {
-		aFrame.push_back(a->frames[i]);
-	}
-	for (int i = 0; i < cntB; i++) {
-		bFrame.push_back(b->frames[i]);
-	}
-	if (aFrame.empty()) aFrame.push_back(a->frames.back());
-	if (bFrame.empty()) bFrame.push_back(b->frames[0]);
-	std::vector<std::vector<float> > ret;
-	const double Pi = acos(-1.0);
-	for(int t = 0; t < frameCount; t++) {
-		double w = 1 - (cos(Pi / frameCount * t) / 2.0 + 1.0 / 2.0);
-		int aid = 1.0*t / frameCount * aFrame.size(), bid = 1.0*t / frameCount * bFrame.size();
-		if (aid >= aFrame.size()) aid = aFrame.size() - 1;
-		if (bid >= bFrame.size()) bid = bFrame.size() - 1;
-		std::vector<float> cur;
-		/*
-		for(int j = 0; j < a->frames.back().size(); j++) {
-			if (j == 0 || j == 2) cur.push_back(a->frames.back()[j]);
-			else cur.push_back(a->frames.back()[j] * (1.0 - w) + b->frames[60][j] * w);
-		}*/
-		for (int j = 0; j < aFrame[aid].size(); j++) {
-			if (j == 0 || j == 2) cur.push_back(aFrame[aid][j]);
-			else cur.push_back(aFrame[aid][j] * (1.0 - w) + bFrame[bid][j] * w);
-		}
-		ret.push_back(cur);
-	}
-	return ret;
-}
-
 // 메인 함수
 int main(int argc, char **argv) {
 	
@@ -907,9 +882,9 @@ int main(int argc, char **argv) {
 	}
 	//init
 	//
-//	frameCur = bvh->frames[0];
-	frames = interpolateFrames(bvh1, bvh2, 10, 10, 120);
-//	std::cout << bvh->name << " " << frameCur[0] << " " << frameCur[1] << " " << frameCur[2] << std::endl;
+	frameCur = bvh->frames[0];
+	//frames = interpolateFrames(bvh1, bvh2, 10, 10, 120);
+	std::cout << bvh->name << " " << frameCur[0] << " " << frameCur[1] << " " << frameCur[2] << std::endl;
 //	selectedJoint = jointMap.find("thorax")->second;
 
 	

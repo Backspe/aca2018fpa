@@ -1,17 +1,81 @@
 #include "fsm.h"
 
+std::vector<std::vector<float> > interpolateFrames(BVH* a, BVH* b, int cntA, int cntB, int frameCount = 60) {
+	assert(a->joints.size() == b->joints.size());
+	assert(1 <= cntA && cntA <= a->frames.size());
+	assert(1 <= cntB && cntB <= b->frames.size());
+	std::vector<std::vector<float> > aFrame, bFrame;
+	for (int i = (int)a->frames.size() - cntA; i < (int)a->frames.size(); i++) {
+		aFrame.push_back(a->frames[i]);
+	}
+	for (int i = 0; i < cntB; i++) {
+		bFrame.push_back(b->frames[i]);
+	}
+	if (aFrame.empty()) aFrame.push_back(a->frames.back());
+	if (bFrame.empty()) bFrame.push_back(b->frames[0]);
+	std::vector<std::vector<float> > ret;
+	const double Pi = acos(-1.0);
+	int preAid = 0, preBid = 0;
+	for(int t = 0; t < frameCount; t++) {
+		double w = 1 - (cos(Pi / frameCount * t) / 2.0 + 1.0 / 2.0);
+		int aid = 1.0*t / frameCount * aFrame.size(), bid = 1.0*t / frameCount * bFrame.size();
+		if (aid >= aFrame.size()) aid = aFrame.size() - 1;
+		if (bid >= bFrame.size()) bid = bFrame.size() - 1;
+		std::vector<float> cur;
+		std::vector<float> pre;
+		/*
+		for(int j = 0; j < a->frames.back().size(); j++) {
+			if (j == 0 || j == 2) cur.push_back(a->frames.back()[j]);
+			else cur.push_back(a->frames.back()[j] * (1.0 - w) + b->frames[60][j] * w);
+		}*/
+		for (int j = 0; j < aFrame[aid].size(); j++) {
+			if (j < 6) {
+//				cur.push_back(aFrame[aid][j]);
+				if (ret.size() == 0) {
+					cur.push_back(aFrame[aid][j]);
+				} else {
+					cur.push_back(
+							ret.back()[j] +   
+							(aFrame[aid][j] - aFrame[preAid][j]) * (1 - w) + 
+							(bFrame[bid][j] - bFrame[preBid][j]) * w 
+							);
+				}
+			}
+			else cur.push_back(aFrame[aid][j] * (1.0 - w) + bFrame[bid][j] * w);
+		}
+		ret.push_back(cur);
+		preAid = aid;
+		preBid = bid;
+	}
+	return ret;
+}
+
 FSM::FSM() {
 	for(int i = 0; i < STATE_NUM; i++) {
 		Parser parser;
 		bvhs.push_back(parser.parse(stateFile[i]));
 		motions.push_back(bvhs[i]->frames);
 		for(int j = 0; j < STATE_NUM; j++) {
-			interpolateFrameTable[i][j] = motions[i].size();
+			if (motions[i].size() > 10) {
+				interpolateFrameTable[i][j][0] = motions[i].size() - 20;
+			} else {
+				interpolateFrameTable[i][j][0] = motions[i].size() - 1;
+			}
+			if (motions[j].size() > 10) {
+				interpolateFrameTable[i][j][1] = 20;
+			} else {
+				interpolateFrameTable[i][j][1] = 1;
+			}
+			//TODO 노가다로 바꿔야 함
 		}
 	}
 	frameIndex = 0;
 	stateCur = STAND;
 	stateNext = STAND;
+	isInterpolate = false;
+	for (int i = 0; i < 6; i++) {
+		offset[i] = 0;
+	}
 }
 
 State FSM::setCommand() {
@@ -109,10 +173,14 @@ State FSM::setCommand() {
 
 void FSM::idle() {
 	frameIndex++; //TODO 시간 고려하기
-	if (frameIndex >= motions[stateCur].size()) {
-		frameIndex -= motions[stateCur].size();
-		//TODO offset 바꾸기?
+	if (isInterpolate && frameIndex >= interMotion.size()) {
+		
+		frameIndex = interpolateFrameTable[stateCur][stateNext][1];
+		for (int i = 0; i < 6; i++) {
+			offset[i] += interMotion.back()[i] - motions[stateNext][frameIndex][i];
+		}
 		stateCur = stateNext;
+		isInterpolate = false;
 		switch(stateCur) {
 		case STAND:
 		case JUMP1:
@@ -139,17 +207,31 @@ void FSM::idle() {
 			break;
 		}
 	}
-	if (frameIndex < interpolateFrameTable[stateCur][stateNext]) {
-		State nxt = setCommand();
-		if (nxt != stateNext && frameIndex < interpolateFrameTable[stateCur][nxt]) {
-			stateNext = nxt;
-			Camera::command = '\0';
+	if (!isInterpolate) {
+		if (frameIndex < interpolateFrameTable[stateCur][stateNext][0]) {
+			//get new command
+			State nxt = setCommand();
+			if (nxt != stateNext && frameIndex < interpolateFrameTable[stateCur][nxt][0]) {
+				stateNext = nxt;
+				Camera::command = '\0';
+			}
+		} else {
+			isInterpolate = true;
+			interMotion = interpolateFrames(
+					bvhs[stateCur], bvhs[stateNext], 
+					motions[stateCur].size() - interpolateFrameTable[stateCur][stateNext][0], 
+					interpolateFrameTable[stateCur][stateNext][1], 
+					20);
+			frameIndex = 0;
 		}
-	} else {
-		//TODO Interpolate stateCur and stateNext
 	}
 }
 
 std::vector< float > FSM::getFrame() {
-	return motions[stateCur][frameIndex];		
+	if (!isInterpolate) {
+		return motions[stateCur][frameIndex];		
+	} else {
+		return interMotion[frameIndex];		
+	}
+
 }

@@ -19,7 +19,7 @@ float Camera::movementScale = 0.2f;
 vec3 Camera::movement = vec3(0.0f, 0.0f, 0.0f);
 std::string Camera::selectedJointName = "ltoes";
 int Camera::maxDepth = 2;
-char Camera::command = ' ';
+char Camera::command = '\0';
 
 // 창 크기 조절 및 카메라 위치 및 방향 조절
 void Camera::resize(int w, int h)
