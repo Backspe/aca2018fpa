@@ -4,6 +4,7 @@
 
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
+#include "glm/gtc/type_ptr.hpp"
 #include "glm/gtx/quaternion.hpp"
 #include <GL/glut.h>
 
@@ -651,43 +652,11 @@ void drawBVH() {
 		printf("state: %d, frameIndex: %d/%lu, command: '%c'\n", fsm.stateCur, fsm.frameIndex, fsm.motions[fsm.stateCur].size(), Camera::command);
 	}
 	frameCur = fsm.getFrame();
-	for(int i = 0; i < 6; i++) {
-		frameCur[i] += fsm.offset[i];
-	}
-	frameCur[0] = 0;
-	frameCur[2] = 0;
+
 //	BVH* current = interpolated[drawIdx++];
 //	if (drawIdx == interpolated.size()) drawIdx = 0;
 //	usleep(1000);
 
-	/*
-	for (int i = 0; i < current->channelCount; i++) {
-		switch(current->channelOrder[i]) {
-			case 0:
-				fc[0] = current->rotation[0];
-				break;
-			case 1:
-				fc[1] = current->rotation[1];
-				break;
-			case 2:
-				fc[2] = current->rotation[2];
-				break;
-			case 3:
-				fc[3] = current->offset[0];
-				break;
-			case 4:
-				fc[4] = current->offset[1];
-				break;
-			case 5:
-				fc[5] = current->offset[2];
-				break;
-			default:
-				std::cout << "[ERROR] i = " << i << std::endl;
-				break;
-		}
-	}
-
-	*/
 
     /* hw2
 	timeCur = glutGet(GLUT_ELAPSED_TIME);
@@ -730,6 +699,8 @@ void drawBVH() {
 
 
 	glTranslatef(current->offset[0], current->offset[1], current->offset[2]);
+
+	glMultMatrixf(glm::value_ptr(fsm.offset));
 
 	for(int i = 0; i < current->channelCount; i++) {
 		switch(current->channelOrder[i]) {

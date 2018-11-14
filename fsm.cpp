@@ -71,9 +71,7 @@ FSM::FSM() {
 	stateCur = STAND;
 	stateNext = STAND;
 	isInterpolate = false;
-	for (int i = 0; i < 6; i++) {
-		offset[i] = 0;
-	}
+	offset = glm::mat4(1.0f);
 }
 
 State FSM::setCommand() {
@@ -169,14 +167,68 @@ State FSM::setCommand() {
 	return ret;
 }
 
+void FSM::setOffset(Frame f1, Frame f2) {
+	BVH* cur = bvhs[0];
+	
+	offset = glm::translate(offset, glm::vec3(
+			f2[0], 
+			f2[1], 
+			f2[2])); 
+	for(int i = 0; i < cur->channelCount; i++) {
+		switch(cur->channelOrder[i]) {
+		case 0:
+			offset = glm::rotate(offset, 
+					glm::radians(f2[i]),
+					glm::vec3(1.0f, 0.0f, 0.0f)
+					) ;
+			break;
+		case 1:
+			offset = glm::rotate(offset, 
+					glm::radians(f2[i]),
+					glm::vec3(0.0f, 1.0f, 0.0f)
+					) ;
+			break;
+		case 2:
+			offset = glm::rotate(offset, 
+					glm::radians(f2[i]),
+					glm::vec3(0.0f, 0.0f, 1.0f)
+					) ;
+			break;
+		}
+	}
+	for(int i = cur->channelCount - 1; i >= 0; i--) {
+		switch(cur->channelOrder[i]) {
+		case 0:
+			offset = glm::rotate(offset, 
+					-glm::radians(f1[i]),
+					glm::vec3(1.0f, 0.0f, 0.0f)
+					) ;
+			break;
+		case 1:
+			offset = glm::rotate(offset, 
+					-glm::radians(f1[i]),
+					glm::vec3(0.0f, 1.0f, 0.0f)
+					) ;
+			break;
+		case 2:
+			offset = glm::rotate(offset, 
+					-glm::radians(f1[i]),
+					glm::vec3(0.0f, 0.0f, 1.0f)
+					) ;
+			break;
+		}
+	}
+	offset = glm::translate(offset, glm::vec3(
+			-f1[0], 
+			-f1[1], 
+			-f1[2])); 
+}
+
 void FSM::idle() {
 	frameIndex++; //TODO 시간 고려하기
 	if (isInterpolate && frameIndex >= interMotion.size()) {
-		
 		frameIndex = interpolateFrameTable[stateNext][0];
-		for (int i = 0; i < 6; i++) {
-			offset[i] += interMotion.back()[i] - motions[stateNext][frameIndex][i];
-		}
+		setOffset(motions[stateNext][frameIndex], interMotion.back());
 		stateCur = stateNext;
 		isInterpolate = false;
 		switch(stateCur) {

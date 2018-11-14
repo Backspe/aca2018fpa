@@ -3,6 +3,9 @@
 #include "readBvh.h"
 #include "camera.h"
 
+#include "glm/glm.hpp"
+#include "glm/gtc/matrix_transform.hpp"
+
 #include <vector>
 #include <stdlib.h>
 
@@ -39,13 +42,14 @@ public:
 	State stateNext;
 	bool isInterpolate;
 	Motion interMotion;
-	float offset[6];
+	glm::mat4 offset;
 	int interpolateFrameTable[STATE_NUM][2]; //이전 state의 몇번째 프레임부터 인터폴레이트하고 나중 스테이트의 몇 프레임까지를 interpolate할 지 저장하는 테이블
 	std::vector< Motion > motions;
 	std::vector< BVH* > bvhs;
 
 	FSM();
 	State setCommand();
+	void setOffset(Frame f1, Frame f2);
 	void idle();
 	Frame getFrame();
 };
