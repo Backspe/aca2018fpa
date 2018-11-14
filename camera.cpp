@@ -20,6 +20,7 @@ vec3 Camera::movement = vec3(0.0f, 0.0f, 0.0f);
 std::string Camera::selectedJointName = "ltoes";
 int Camera::maxDepth = 2;
 char Camera::command = '\0';
+char Camera::command2 = '\0';
 
 // 창 크기 조절 및 카메라 위치 및 방향 조절
 void Camera::resize(int w, int h)
@@ -133,12 +134,12 @@ void Camera::specialKeyboardHandler(int key, int x, int y) {
 		if (fov > 170) fov = 170;
 		break;
 	case GLUT_KEY_HOME:
-		cameraDistance -= 1;
+		cameraDistance -= 5;
 		if (cameraDistance < 1) cameraDistance = 1;
 		break;
 	case GLUT_KEY_END:
-		cameraDistance += 1;
-		if (cameraDistance > 1000) cameraDistance = 1000;
+		cameraDistance += 5;
+		if (cameraDistance > 2000) cameraDistance = 2000;
 		break;
 	case GLUT_KEY_DOWN:
 		cov = cov - cameraUpVec * 0.5f;
@@ -177,6 +178,8 @@ void Camera::keyboardHandler(unsigned char key, int x, int y) {
 	case ' ':
 		command = key;
 		break;
+	case 'l':
+		command2 = key;
 	/*
 	case 'w':
 		movement = cameraUpVec * movementScale;		

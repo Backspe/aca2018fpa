@@ -275,6 +275,10 @@ void FSM::idle() {
 			frameIndex = 0;
 		}
 	}
+	if (Camera::command2 == 'l') {
+		Camera::cov = glm::vec3(offset[3][0], offset[3][1], offset[3][2]);
+		Camera::command2 = '\0';
+	}
 }
 
 std::vector< float > FSM::getFrame() {

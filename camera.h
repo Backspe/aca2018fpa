@@ -39,6 +39,7 @@ public:
 	static std::string selectedJointName;
 	static int maxDepth;
 	static char command;
+	static char command2;
 };
 
 #endif
