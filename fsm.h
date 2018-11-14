@@ -40,7 +40,7 @@ public:
 	bool isInterpolate;
 	Motion interMotion;
 	float offset[6];
-	int interpolateFrameTable[STATE_NUM][STATE_NUM][2]; //이전 state의 몇번째 프레임부터 인터폴레이트하고 나중 스테이트의 몇 프레임까지를 interpolate할 지 저장하는 테이블
+	int interpolateFrameTable[STATE_NUM][2]; //이전 state의 몇번째 프레임부터 인터폴레이트하고 나중 스테이트의 몇 프레임까지를 interpolate할 지 저장하는 테이블
 	std::vector< Motion > motions;
 	std::vector< BVH* > bvhs;
 

@@ -55,19 +55,17 @@ FSM::FSM() {
 		Parser parser;
 		bvhs.push_back(parser.parse(stateFile[i]));
 		motions.push_back(bvhs[i]->frames);
-		for(int j = 0; j < STATE_NUM; j++) {
-			if (motions[i].size() > 10) {
-				interpolateFrameTable[i][j][0] = motions[i].size() - 20;
-			} else {
-				interpolateFrameTable[i][j][0] = motions[i].size() - 1;
-			}
-			if (motions[j].size() > 10) {
-				interpolateFrameTable[i][j][1] = 20;
-			} else {
-				interpolateFrameTable[i][j][1] = 1;
-			}
-			//TODO 노가다로 바꿔야 함
+		if (motions[i].size() > 20) {
+			interpolateFrameTable[i][1] = motions[i].size() - 20;
+		} else {
+			interpolateFrameTable[i][1] = motions[i].size() - 1;
 		}
+		if (motions[i].size() > 20) {
+			interpolateFrameTable[i][0] = 20;
+		} else {
+			interpolateFrameTable[i][0] = 1;
+		}
+		//TODO 노가다로 바꿔야 함
 	}
 	frameIndex = 0;
 	stateCur = STAND;
@@ -175,7 +173,7 @@ void FSM::idle() {
 	frameIndex++; //TODO 시간 고려하기
 	if (isInterpolate && frameIndex >= interMotion.size()) {
 		
-		frameIndex = interpolateFrameTable[stateCur][stateNext][1];
+		frameIndex = interpolateFrameTable[stateNext][0];
 		for (int i = 0; i < 6; i++) {
 			offset[i] += interMotion.back()[i] - motions[stateNext][frameIndex][i];
 		}
@@ -208,10 +206,10 @@ void FSM::idle() {
 		}
 	}
 	if (!isInterpolate) {
-		if (frameIndex < interpolateFrameTable[stateCur][stateNext][0]) {
+		if (frameIndex < interpolateFrameTable[stateCur][1]) {
 			//get new command
 			State nxt = setCommand();
-			if (nxt != stateNext && frameIndex < interpolateFrameTable[stateCur][nxt][0]) {
+			if (nxt != stateNext && frameIndex < interpolateFrameTable[stateCur][1]) {
 				stateNext = nxt;
 				Camera::command = '\0';
 			}
@@ -219,8 +217,8 @@ void FSM::idle() {
 			isInterpolate = true;
 			interMotion = interpolateFrames(
 					bvhs[stateCur], bvhs[stateNext], 
-					motions[stateCur].size() - interpolateFrameTable[stateCur][stateNext][0], 
-					interpolateFrameTable[stateCur][stateNext][1], 
+					motions[stateCur].size() - interpolateFrameTable[stateCur][1], 
+					interpolateFrameTable[stateNext][0], 
 					20);
 			frameIndex = 0;
 		}
