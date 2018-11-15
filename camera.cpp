@@ -142,16 +142,16 @@ void Camera::specialKeyboardHandler(int key, int x, int y) {
 		if (cameraDistance > 3000) cameraDistance = 3000;
 		break;
 	case GLUT_KEY_DOWN:
-		cov = cov - cameraUpVec * 0.5f;
+		cov = cov - cameraUpVec * 5.0f;
 		break;
 	case GLUT_KEY_UP:
-		cov = cov + cameraUpVec * 0.5f;
+		cov = cov + cameraUpVec * 5.0f;
 		break;
 	case GLUT_KEY_LEFT:
-		cov = cov - cross(cameraUpVec, cameraPlaneVec) * 0.5f;
+		cov = cov - cross(cameraUpVec, cameraPlaneVec) * 5.0f;
 		break;
 	case GLUT_KEY_RIGHT:
-		cov = cov + cross(cameraUpVec, cameraPlaneVec) * 0.5f;
+		cov = cov + cross(cameraUpVec, cameraPlaneVec) * 5.0f;
 		break;
 	default:
 		break;

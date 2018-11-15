@@ -829,41 +829,23 @@ int main(int argc, char **argv) {
 	
 	initParam();
 
-	char fileName[30] = "MotionData/Trial001.bvh";
-	Parser parser1, parser2;
+	Parser parser1;
 
 	BVH *bvh1, *bvh2;
-	//char file1[50] = "cmu/16_57_run&jog, sudden stop.bvh";
-	char file1[50] = "cmu/16_57_run&jog, sudden stop.bvh";
-	char file2[50] = "cmu/16_01_jump.bvh";
+	char file1[50] = "MotionData/STAND.bvh";
 	bvh1=parser1.parse(file1);
-	bvh2=parser2.parse(file2);
 	
 	bvh = bvh1;
 
-	/*
-	if (argc == 1) {
-		bvh = parser.parse(fileName);
-	} else {
-		bvh = parser.parse(argv[1]);
-	}
-	*/
 	for(Joint* joint : bvh->joints) {
 		jointMapping(joint);
 	}
-	//init
-	//
-	frameCur = bvh->frames[0];
-	//frames = interpolateFrames(bvh1, bvh2, 10, 10, 120);
-	std::cout << bvh->name << " " << frameCur[0] << " " << frameCur[1] << " " << frameCur[2] << std::endl;
-//	selectedJoint = jointMap.find("thorax")->second;
-
 	
 	glutInit(&argc, argv);
 
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
 	glutInitWindowSize(800, 600);
-	glutCreateWindow("Animation HW4 201*-***** ***, 2017-25969 Choe Byeongseo");
+	glutCreateWindow("Animation HW4 2018-23598, 2017-259690");
 
 	glutSpecialFunc(camera.specialKeyboardHandler);
 	glutKeyboardFunc(camera.keyboardHandler);
