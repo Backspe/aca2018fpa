@@ -2,7 +2,7 @@
 
 vec3 Camera::cov = vec3(0.0f, 100.0f, 0.0f);
 vec3 Camera::cameraPlaneVec = vec3(0.0, 0.0, 1.0);
-float Camera::cameraDistance = 300;
+float Camera::cameraDistance = 800;
 vec3 Camera::cameraUpVec = vec3(0.0, 1.0, 0.0);
 float Camera::fov = 45;
 quat Camera::trackballRot = glm::quat();
@@ -139,7 +139,7 @@ void Camera::specialKeyboardHandler(int key, int x, int y) {
 		break;
 	case GLUT_KEY_END:
 		cameraDistance += 5;
-		if (cameraDistance > 2000) cameraDistance = 2000;
+		if (cameraDistance > 3000) cameraDistance = 3000;
 		break;
 	case GLUT_KEY_DOWN:
 		cov = cov - cameraUpVec * 0.5f;
