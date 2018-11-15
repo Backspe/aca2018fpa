@@ -29,8 +29,7 @@ std::vector<std::vector<float> > interpolateFrames(BVH* a, BVH* b, int cntA, int
 			else cur.push_back(a->frames.back()[j] * (1.0 - w) + b->frames[60][j] * w);
 		}*/
 		for (int j = 0; j < aFrame[aid].size(); j++) {
-			if (j < 6) {
-//				cur.push_back(aFrame[aid][j]);
+			if (j == 0 || j == 2 || j == 5) {
 				if (ret.size() == 0) {
 					cur.push_back(aFrame[aid][j]);
 				} else {
@@ -256,11 +255,17 @@ void FSM::idle() {
 			}
 		} else {
 			isInterpolate = true;
+			int interLength;
+			if (int(motions[stateCur].size() - interpolateFrameTable[stateCur][1]) > interpolateFrameTable[stateNext][0]) {
+				interLength = int(motions[stateCur].size() - interpolateFrameTable[stateCur][1]);
+			} else {
+				interLength = interpolateFrameTable[stateNext][0];
+			}
 			interMotion = interpolateFrames(
 					bvhs[stateCur], bvhs[stateNext], 
 					motions[stateCur].size() - interpolateFrameTable[stateCur][1], 
 					interpolateFrameTable[stateNext][0], 
-					20);
+					interLength);
 			frameIndex = 0;
 		}
 	}
