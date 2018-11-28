@@ -646,6 +646,7 @@ void drawBVH() {
 	//if (drawIdx == frames.size()) drawIdx = 0;
 
 	fsm.idle();
+	printf("idle finish\n");
 	if(fsm.isInterpolate) {
 		printf("state: %d->%d, frameIndex: %d/%lu, command: '%c'\n", fsm.stateCur, fsm.stateNext, fsm.frameIndex, fsm.getFrame().size(), Camera::command);
 	} else {

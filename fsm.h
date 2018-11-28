@@ -45,7 +45,7 @@ public:
 	State stateCur;
 	State stateNext;
 	bool isInterpolate;
-	Motion interMotion;
+	Motion interMotion, blendMotion;
 	glm::mat4 offset;
 	const char interpolateFrameTable[STATE_NUM][2]= {
 		{1, 4},
@@ -68,7 +68,6 @@ public:
 	//int interpolateFrameTable[STATE_NUM][2]; //이전 state의 몇번째 프레임부터 인터폴레이트하고 나중 스테이트의 몇 프레임까지를 interpolate할 지 저장하는 테이블
 	std::vector< Motion > motions;
 	std::vector< BVH* > bvhs;
-	std::vector< std::vector< Motion > > walkMotions;
 
 	FSM();
 	State setCommand();
