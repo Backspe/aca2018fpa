@@ -308,7 +308,7 @@ void FSM::setOffset(Frame f1, Frame f2) {
 		switch(cur->channelOrder[i]) {
 		case 0:
 			offset = glm::rotate(offset, 
-					glm::radians(f2[i]),
+					0 * glm::radians(f2[i]),
 					glm::vec3(1.0f, 0.0f, 0.0f)
 					) ;
 			break;
@@ -320,7 +320,7 @@ void FSM::setOffset(Frame f1, Frame f2) {
 			break;
 		case 2:
 			offset = glm::rotate(offset, 
-					glm::radians(f2[i]),
+					0 * glm::radians(f2[i]),
 					glm::vec3(0.0f, 0.0f, 1.0f)
 					) ;
 			break;
@@ -330,7 +330,7 @@ void FSM::setOffset(Frame f1, Frame f2) {
 		switch(cur->channelOrder[i]) {
 		case 0:
 			offset = glm::rotate(offset, 
-					-glm::radians(f1[i]),
+					0 * -glm::radians(f1[i]),
 					glm::vec3(1.0f, 0.0f, 0.0f)
 					) ;
 			break;
@@ -342,7 +342,7 @@ void FSM::setOffset(Frame f1, Frame f2) {
 			break;
 		case 2:
 			offset = glm::rotate(offset, 
-					-glm::radians(f1[i]),
+					0 * -glm::radians(f1[i]),
 					glm::vec3(0.0f, 0.0f, 1.0f)
 					) ;
 			break;
@@ -356,12 +356,12 @@ void FSM::setOffset(Frame f1, Frame f2) {
 
 void FSM::idle() {
 
-	timeCurr = glutGet(GLUT_ELAPSED_TIME) / 5;
+	timeCurr = glutGet(GLUT_ELAPSED_TIME);
 	if(timeCurr - timeBasee >= bvhs[0]->frameTime * 1000) {
 		timeBasee += bvhs[0]->frameTime * 1000;
 		frameIndex++;
+		printf("u, v = %f, %f\n", Camera::walkVelocity, Camera::walkAngle);
 	}
-	printf("u, v = %f, %f\n", Camera::walkVelocity, Camera::walkAngle);
 //	frameIndex++; //TODO 시간 고려하기
 	if (stateNext == NANNAN && stateCur != NANNAN) {
 		stateCur = NANNAN;
@@ -372,25 +372,36 @@ void FSM::idle() {
 	}
 	if (stateCur == NANNAN) {
 		if (!isInterpolate) {
-			if (frameIndex >= blendMotion.size() * 2 / 4) {
+			if (frameIndex >= blendMotion.size() - blendMotion.size() * 2 / 5) {
 				isInterpolate = true;
-				Frame curLast = blendMotion[blendMotion.size() * 2 / 4];
+				Frame curLast = blendMotion[blendMotion.size() - blendMotion.size() * 2 / 5 - 1];
 				Motion prevMotion = blendMotion;
 				blendMotion = interpolateMotions(
 						walkMotions,					
 						Camera::walkVelocity, Camera::walkAngle);
 				interMotion = interpolateFrames(	
 					prevMotion, blendMotion,
-					prevMotion.size() * 2 / 4, blendMotion.size() * 2 / 4,
-					prevMotion.size() * 1 / 4 + blendMotion.size() * 1 / 4);
+					prevMotion.size() * 2 / 5, blendMotion.size() * 2 / 5,
+					prevMotion.size() * 1 / 5 + blendMotion.size() * 1 / 5);
+
+
+				float wbx = interMotion.back()[4];
+				float wbz = interMotion.back()[3];
+				for(int i = 0; i < interMotion.size(); i++) {
+					interMotion[i][3] += (blendMotion[blendMotion.size() * 2 / 5 - 1][3] - wbz) * (i + 1.0) / interMotion.size();
+					interMotion[i][4] += (blendMotion[blendMotion.size() * 2 / 5 - 1][4] - wbx) * (i + 1.0) / interMotion.size();
+				}
+				
+				puts("set offset 1");
 				setOffset(interMotion[0], curLast);
 				frameIndex = 0;
 				printf("u, v = %f, %f\n", Camera::walkVelocity, Camera::walkAngle);
 			}
 		} else {
 			if (frameIndex >= interMotion.size()) {
-				frameIndex = blendMotion.size() * 2 / 4;
+				frameIndex = blendMotion.size() * 2 / 5;
 				Frame curLast = interMotion.back();
+				puts("set offset 2");
 				setOffset(blendMotion[frameIndex], curLast);
 				isInterpolate = false;
 			}
@@ -460,6 +471,19 @@ void FSM::idle() {
 		Camera::cov = glm::vec3(offset[3][0], offset[3][1], offset[3][2]);
 		Camera::command2 = '\0';
 	}
+}
+
+Motion FSM::getMotion() {
+	if (!isInterpolate) {
+		if(stateCur == NANNAN) {
+			return blendMotion;
+		} else {
+			return motions[stateCur];		
+		}
+	} else {
+		return interMotion;
+	}
+
 }
 
 std::vector< float > FSM::getFrame() {

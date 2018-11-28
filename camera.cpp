@@ -185,19 +185,19 @@ void Camera::keyboardHandler(unsigned char key, int x, int y) {
 		break;
 	case 'i':
 		walkVelocity += 0.01;
-		if (walkVelocity > 1.0) walkVelocity = 1.0;
+		if (walkVelocity > 0.9) walkVelocity = 0.9;
 		break;
 	case 'k':
 		walkVelocity -= 0.01;
-		if (walkVelocity < 0.0) walkVelocity = 0.0;
+		if (walkVelocity < 0.1) walkVelocity = 0.1;
 		break;
 	case 'j':
 		walkAngle -= 0.01;
-		if (walkAngle < 0.0) walkAngle = 0.0;
+		if (walkAngle < 0.1) walkAngle = 0.1;
 		break;
 	case 'l':
 		walkAngle += 0.01;
-		if (walkAngle > 1.0) walkAngle = 1.0;
+		if (walkAngle > 0.9) walkAngle = 0.9;
 		break;
 	/*
 	case 'w':

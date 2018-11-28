@@ -74,6 +74,7 @@ public:
 	void setOffset(Frame f1, Frame f2);
 	void idle();
 	Frame getFrame();
+	Motion getMotion();
 };
 
 #endif

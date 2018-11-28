@@ -639,6 +639,7 @@ void drawBVHJoint(Joint* current) {
 
 int drawIdx = 0;
 std::vector<std::vector<float> > frames;
+int prevfi = -1;
 
 void drawBVH() {
 	BVH* current = bvh;
@@ -646,12 +647,14 @@ void drawBVH() {
 	//if (drawIdx == frames.size()) drawIdx = 0;
 
 	fsm.idle();
-	printf("idle finish\n");
 	if(fsm.isInterpolate) {
-		printf("state: %d->%d, frameIndex: %d/%lu, command: '%c'\n", fsm.stateCur, fsm.stateNext, fsm.frameIndex, fsm.getFrame().size(), Camera::command);
+		if(fsm.frameIndex != prevfi)
+			printf("state: %d->%d, frameIndex: %d/%lu, command: '%c'\n", fsm.stateCur, fsm.stateNext, fsm.frameIndex, fsm.getMotion().size(), Camera::command);
 	} else {
-		printf("state: %d, frameIndex: %d/%lu, command: '%c'\n", fsm.stateCur, fsm.frameIndex, fsm.motions[fsm.stateCur].size(), Camera::command);
+		if(fsm.frameIndex != prevfi)
+			printf("state: %d, frameIndex: %d/%lu, command: '%c'\n", fsm.stateCur, fsm.frameIndex, fsm.getMotion().size(), Camera::command);
 	}
+	prevfi = fsm.frameIndex;
 	frameCur = fsm.getFrame();
 
 //	BVH* current = interpolated[drawIdx++];
