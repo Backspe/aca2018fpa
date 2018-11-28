@@ -1,5 +1,7 @@
 #include "fsm.h"
 
+int timeCurr = 0, timeBasee = 0;
+
 float surface(fMatrix points, float u, float v) {
 	fMatrix oldpoints = points;
 	while(oldpoints.size() > 1) {
@@ -309,8 +311,14 @@ void FSM::setOffset(Frame f1, Frame f2) {
 }
 
 void FSM::idle() {
+
+	timeCurr = glutGet(GLUT_ELAPSED_TIME);
+	if(timeCurr - timeBasee >= bvhs[0]->frameTime * 1000) {
+		timeBasee += bvhs[0]->frameTime * 1000;
+		frameIndex++;
+	}
 	frameIndex++; //TODO 시간 고려하기
-	if (stateNext == NANNAN) {
+	if (stateNext == NANNAN && stateCur != NANNAN) {
 		stateCur = NANNAN;
 		interMotion = interpolateMotions(
 				walkMotions,					
