@@ -40,6 +40,7 @@ public:
 	static int maxDepth;
 	static char command;
 	static char command2;
+	static float walkVelocity, walkAngle;
 };
 
 #endif

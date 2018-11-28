@@ -11,9 +11,7 @@ vec3 Camera::v2 = glm::vec3(1, 0, 0);
 vec3 Camera::modelRect[8] = { vec3(-100, 100-100, -100), vec3(-100, 100-100, 100), vec3(100, 100-100, 100), vec3(100, 100-100, -100),
 vec3(-100, 100, -100), vec3(-100, 100, 100), vec3(100, 100, 100), vec3(100, 100, -100) };
 
-bool Camera::leftButton = false;
-float Camera::mousePosX = 0.0;
-float Camera::mousePosY = 0.0;
+bool Camera::leftButton = false; float Camera::mousePosX = 0.0; float Camera::mousePosY = 0.0;
 
 float Camera::movementScale = 0.2f;
 vec3 Camera::movement = vec3(0.0f, 0.0f, 0.0f);
@@ -21,6 +19,8 @@ std::string Camera::selectedJointName = "ltoes";
 int Camera::maxDepth = 2;
 char Camera::command = '\0';
 char Camera::command2 = '\0';
+float Camera::walkVelocity = 0.5;
+float Camera::walkAngle = 0.5;
 
 // 창 크기 조절 및 카메라 위치 및 방향 조절
 void Camera::resize(int w, int h)
@@ -178,8 +178,25 @@ void Camera::keyboardHandler(unsigned char key, int x, int y) {
 	case ' ':
 		command = key;
 		break;
-	case 'l':
+	case 'x':
 		command2 = key;
+		break;
+	case 'i':
+		walkVelocity += 0.01;
+		if (walkVelocity > 1.0) walkVelocity = 1.0;
+		break;
+	case 'k':
+		walkVelocity -= 0.01;
+		if (walkVelocity < 0.0) walkVelocity = 0.0;
+		break;
+	case 'j':
+		walkAngle -= 0.01;
+		if (walkAngle < 0.0) walkAngle = 0.0;
+		break;
+	case 'l':
+		walkAngle += 0.01;
+		if (walkAngle > 1.0) walkAngle = 1.0;
+		break;
 	/*
 	case 'w':
 		movement = cameraUpVec * movementScale;		

@@ -1,5 +1,29 @@
 #include "fsm.h"
 
+float surface(std::vector< std::vector< float > > points, float u, float v) {
+	std::vector< std::vector< float > > oldpoints = points;
+	while(oldpoints.size() > 1) {
+		std::vector< std::vector< float > > newpoints;
+		for(int i = 0; i < oldpoints.size() - 1; i++) {
+			std::vector< float > row;
+			for(int j = 0; j < oldpoints.size(); j++) {
+				row.push_back((1 - u) * oldpoints[i][j] + u * oldpoints[i+1][j]);
+			}
+			newpoints.push_back(row);
+		}
+		oldpoints = newpoints;
+	}
+	std::vector< float > oldrow = oldpoints[0];
+	while(oldrow.size() > 1) {
+		std::vector< float > row;
+		for(int i = 0; i < oldrow.size() - 1; i++) {
+			row.push_back((1 - v) * oldrow[i] + v * oldrow[i+1]);
+		}
+		oldrow = row;
+	}
+	return oldrow[0];
+}
+
 std::vector<std::vector<float> > interpolateFrames(BVH* a, BVH* b, int cntA, int cntB, int frameCount = 60) {
 	assert(a->joints.size() == b->joints.size());
 	assert(1 <= cntA && cntA <= a->frames.size());
@@ -52,8 +76,15 @@ std::vector<std::vector<float> > interpolateFrames(BVH* a, BVH* b, int cntA, int
 FSM::FSM() {
 	for(int i = 0; i < STATE_NUM; i++) {
 		Parser parser;
-		bvhs.push_back(parser.parse(stateFile[i]));
-		motions.push_back(bvhs[i]->frames);
+		BVH* bvh = parser.parse(stateFile[i]);
+		for(int j = 0; j < bvh->frames.size(); j++) {
+			float w = j / (bvh->frames.size() - 1);
+			bvh->frames[j][1] -= (bvh->frames.back()[1] - bvh->frames[0][1]) * w;
+			bvh->frames[j][3] -= (bvh->frames.back()[3] - bvh->frames[0][3]) * w;
+			bvh->frames[j][4] -= (bvh->frames.back()[4] - bvh->frames[0][4]) * w;
+		}
+		bvhs.push_back(bvh);
+		motions.push_back(bvh->frames);
 	}
 	frameIndex = 0;
 	stateCur = STAND;
@@ -269,7 +300,7 @@ void FSM::idle() {
 			frameIndex = 0;
 		}
 	}
-	if (Camera::command2 == 'l') {
+	if (Camera::command2 == 'x') {
 		Camera::cov = glm::vec3(offset[3][0], offset[3][1], offset[3][2]);
 		Camera::command2 = '\0';
 	}
