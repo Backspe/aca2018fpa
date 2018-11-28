@@ -9,12 +9,14 @@
 #include <vector>
 #include <stdlib.h>
 
-#define STATE_NUM 15
+#define STATE_NUM 16
 typedef std::vector< float > Frame;
 typedef std::vector< Frame > Motion;
+typedef std::vector< float > fVector;
+typedef std::vector< std::vector< float > > fMatrix;
 
 enum State {
-	STAND, JUMP1, JUMP2, START, STOP, STRAIGHT1, LEFT1, RIGHT1, STRAIGHT2, LEFT2, RIGHT2, STRAIGHT3, LEFT3, RIGHT3, BREAK
+	STAND, JUMP1, JUMP2, START, STOP, STRAIGHT1, LEFT1, RIGHT1, STRAIGHT2, LEFT2, RIGHT2, STRAIGHT3, LEFT3, RIGHT3, BREAK, NANNAN
 };
 
 const char stateFile[STATE_NUM][50] = {
@@ -32,7 +34,8 @@ const char stateFile[STATE_NUM][50] = {
 		"MotionData/STRAIGHT3_cut.bvh",
 		"MotionData/LEFT3_cut.bvh",
 		"MotionData/RIGHT3_cut.bvh",
-		"MotionData/BREAK_cut.bvh"
+		"MotionData/BREAK_cut.bvh",
+		"MotionData/STRAIGHT1_cut.bvh"
 };
 
 
@@ -59,11 +62,13 @@ public:
 		{23, 25},
 		{12, 17},
 		{22, 28},
-		{20, 48}
+		{20, 48},
+		{31, 38}
 	};
 	//int interpolateFrameTable[STATE_NUM][2]; //이전 state의 몇번째 프레임부터 인터폴레이트하고 나중 스테이트의 몇 프레임까지를 interpolate할 지 저장하는 테이블
 	std::vector< Motion > motions;
 	std::vector< BVH* > bvhs;
+	std::vector< std::vector< Motion > > walkMotions;
 
 	FSM();
 	State setCommand();

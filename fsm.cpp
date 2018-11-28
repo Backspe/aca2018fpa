@@ -1,11 +1,11 @@
 #include "fsm.h"
 
-float surface(std::vector< std::vector< float > > points, float u, float v) {
-	std::vector< std::vector< float > > oldpoints = points;
+float surface(fMatrix points, float u, float v) {
+	fMatrix oldpoints = points;
 	while(oldpoints.size() > 1) {
-		std::vector< std::vector< float > > newpoints;
+		fMatrix newpoints;
 		for(int i = 0; i < oldpoints.size() - 1; i++) {
-			std::vector< float > row;
+			fVector row;
 			for(int j = 0; j < oldpoints.size(); j++) {
 				row.push_back((1 - u) * oldpoints[i][j] + u * oldpoints[i+1][j]);
 			}
@@ -13,15 +13,61 @@ float surface(std::vector< std::vector< float > > points, float u, float v) {
 		}
 		oldpoints = newpoints;
 	}
-	std::vector< float > oldrow = oldpoints[0];
+	fVector oldrow = oldpoints[0];
 	while(oldrow.size() > 1) {
-		std::vector< float > row;
+		fVector row;
 		for(int i = 0; i < oldrow.size() - 1; i++) {
 			row.push_back((1 - v) * oldrow[i] + v * oldrow[i+1]);
 		}
 		oldrow = row;
 	}
 	return oldrow[0];
+}
+
+Motion interpolateMotions(std::vector< std::vector< Motion > > motions, float u, float v) {
+	
+	fMatrix motionSizes;
+	for(int i = 0; i < motions.size(); i++) {
+		fVector row;
+		for(int j = 0; j < motions[0].size(); j++) {
+			row.push_back(float(motions[i][j].size()));
+		}
+		motionSizes.push_back(row);
+	}
+
+	int frameCount = int(surface(motionSizes, u, v));
+
+	std::vector<std::vector<float> > ret;
+	const double Pi = acos(-1.0);
+	int preAid = 0, preBid = 0;
+	for(int t = 0; t < frameCount; t++) {
+		double w = 1 - (cos(Pi / frameCount * t) / 2.0 + 1.0 / 2.0);
+		std::vector< std::vector< int > > frameIds;
+		for(int i = 0; i < motions.size(); i++) {
+			std::vector< int > row;
+			for(int j = 0; j < motions[0].size(); j++) {
+				int frameId = 1.0 * t / frameCount * motions[i][j].size();
+				if (frameId >= motions[i][j].size()) frameId = motions[i][j].size() - 1;
+				row.push_back(frameId);
+			}
+			frameIds.push_back(row);
+		}
+		std::vector<float> cur;
+		std::vector<float> pre;
+		for (int idx = 0; idx < motions[0][0][0].size(); idx++) {
+			fMatrix fmat;
+			for(int ii = 0; ii < motions.size(); ii++) {
+				fVector row;
+				for(int jj = 0; jj < motions[ii].size(); jj++) {
+					row.push_back(motions[ii][jj][frameIds[ii][jj]][idx]);
+				}
+				fmat.push_back(row);
+			}
+			cur.push_back(surface(fmat, u, v));
+		}
+		ret.push_back(cur);
+	}
+	return ret;
 }
 
 std::vector<std::vector<float> > interpolateFrames(BVH* a, BVH* b, int cntA, int cntB, int frameCount = 60) {
@@ -91,6 +137,23 @@ FSM::FSM() {
 	stateNext = STAND;
 	isInterpolate = false;
 	offset = glm::mat4(1.0f);
+
+	std::vector<Motion> row1;
+	row1.push_back(motions[6]);
+	row1.push_back(motions[5]);
+	row1.push_back(motions[7]);
+	walkMotions.push_back(row1);
+	std::vector<Motion> row2;
+	row2.push_back(motions[9]);
+	row2.push_back(motions[8]);
+	row2.push_back(motions[10]);
+	walkMotions.push_back(row2);
+	std::vector<Motion> row3;
+	row3.push_back(motions[12]);
+	row3.push_back(motions[11]);
+	row3.push_back(motions[13]);
+	walkMotions.push_back(row3);
+	
 }
 
 State FSM::setCommand() {
@@ -182,6 +245,8 @@ State FSM::setCommand() {
 			ret = JUMP2;
 			break;
 		}
+	} else if (c == 'e') {
+		ret = NANNAN;
 	}
 	return ret;
 }
@@ -245,6 +310,29 @@ void FSM::setOffset(Frame f1, Frame f2) {
 
 void FSM::idle() {
 	frameIndex++; //TODO 시간 고려하기
+	if (stateNext == NANNAN) {
+		stateCur = NANNAN;
+		interMotion = interpolateMotions(
+				walkMotions,					
+				Camera::walkVelocity, Camera::walkAngle);
+		frameIndex = 0;
+		printf("u, v = %f, %f\n", Camera::walkVelocity, Camera::walkAngle);
+	}
+	if (stateCur == NANNAN) {
+		isInterpolate = true;
+		if (frameIndex >= interMotion.size()) {
+			interMotion = interpolateMotions(
+					walkMotions,					
+					Camera::walkVelocity, Camera::walkAngle);
+			frameIndex = 0;
+			printf("u, v = %f, %f\n", Camera::walkVelocity, Camera::walkAngle);
+		}
+		if (Camera::command2 == 'x') {
+			Camera::cov = glm::vec3(offset[3][0], offset[3][1], offset[3][2]);
+			Camera::command2 = '\0';
+		}
+		return;
+	}
 	if (isInterpolate && frameIndex >= interMotion.size()) {
 		frameIndex = interpolateFrameTable[stateNext][0];
 		setOffset(motions[stateNext][frameIndex], interMotion.back());

@@ -170,9 +170,11 @@ void Camera::keyboardHandler(unsigned char key, int x, int y) {
 		}
 		cameraDistance = newDis;
 		break;
+	case 'q':
 	case 'w':
-	case 's':
+	case 'e':
 	case 'a':
+	case 's':
 	case 'd':
 	case 'f':
 	case ' ':
