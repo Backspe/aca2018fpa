@@ -255,11 +255,6 @@ Motion interpolateFrames(Motion a, Motion b, int cntA, int cntB, int frameCount)
 		if (bid >= bFrame.size()) bid = bFrame.size() - 1;
 		std::vector<float> cur;
 		std::vector<float> pre;
-		/*
-		for(int j = 0; j < a->frames.back().size(); j++) {
-			if (j == 0 || j == 2) cur.push_back(a->frames.back()[j]);
-			else cur.push_back(a->frames.back()[j] * (1.0 - w) + b->frames[60][j] * w);
-		}*/
 		for (int j = 0; j < aFrame[aid].size(); j++) {
 			if (j == 0 || j == 2 || j == 5) {
 				if (ret.size() == 0) {
@@ -281,6 +276,34 @@ Motion interpolateFrames(Motion a, Motion b, int cntA, int cntB, int frameCount)
 			}
 			else cur.push_back(aFrame[aid][j] * (1.0 - w) + bFrame[bid][j] * w);
 		}
+		auto mat_a = glm::eulerAngleXYZ(
+				glm::radians(aFrame[aid][3]), 
+				glm::radians(aFrame[aid][4]), 
+				glm::radians(aFrame[aid][5])); 
+		auto mat_b = glm::eulerAngleXYZ(
+				glm::radians(bFrame[bid][3]), 
+				glm::radians(bFrame[bid][4]), 
+				glm::radians(bFrame[bid][5])); 
+		auto mat_c = glm::eulerAngleXYZ(
+				glm::radians(cur[3]), 
+				glm::radians(cur[4]), 
+				glm::radians(cur[5])); 
+		double angle_a = glm::atan(mat_a[0][1], mat_a[0][0]);
+		double angle_b = glm::atan(mat_b[0][1], mat_b[0][0]);
+		double angle_c = glm::atan(mat_c[0][1], mat_c[0][0]);
+		double move_z_a = (aFrame[aid][2] - aFrame[preAid][2]) * glm::cos(angle_a)
+				+ (aFrame[aid][0] - aFrame[preAid][0]) * glm::sin(angle_a);
+		double move_x_a = (aFrame[aid][0] - aFrame[preAid][0]) * glm::cos(angle_a)
+				- (aFrame[aid][2] - aFrame[preAid][2]) * glm::sin(angle_a);
+		double move_z_b = (bFrame[bid][2] - bFrame[preBid][2]) * glm::cos(angle_b)
+				+ (bFrame[bid][0] - bFrame[preBid][0]) * glm::sin(angle_b);
+		double move_x_b = (bFrame[bid][0] - bFrame[preAid][0]) * glm::cos(angle_b)
+				- (bFrame[bid][2] - bFrame[preBid][2]) * glm::sin(angle_b);
+		double move_z_c = move_z_a * (1.0 - w) + move_z_b * w;
+		double move_x_c = move_x_a * (1.0 - w) + move_x_b * w;
+		cur[2] = ret.back()[2] + move_z_c * cos(angle_c) - move_x_c * sin(angle_c);
+		cur[0] = ret.back()[0] + move_x_c * cos(angle_c) + move_z_c * sin(angle_c);
+
 		ret.push_back(cur);
 		preAid = aid;
 		preBid = bid;

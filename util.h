@@ -8,6 +8,7 @@
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
 #include "glm/gtx/quaternion.hpp"
+#include "glm/gtx/euler_angles.hpp"
 #include <GL/glut.h>
 
 #include <Eigen/Core>
