@@ -3,6 +3,8 @@
 int timeCurr = 0, timeBasee = 0;
 std::vector< std::vector< Motion > > walkMotions;
 
+#define STEP_RATIO 0.45
+
 float surface(fMatrix points, float u, float v) {
 	fMatrix oldpoints = points;
 	while(oldpoints.size() > 1) {
@@ -87,8 +89,8 @@ Motion interpolateFrames(Motion a, Motion b, int cntA, int cntB, int frameCount 
 	const double Pi = acos(-1.0);
 	int preAid = 0, preBid = 0;
 	for(int t = 0; t < frameCount; t++) {
-		double w = 1 - (cos(Pi / frameCount * t) / 2.0 + 1.0 / 2.0);
-		int aid = 1.0*t / frameCount * aFrame.size(), bid = 1.0*t / frameCount * bFrame.size();
+		double w = 1 - (cos(Pi / (frameCount-1) * t) / 2.0 + 1.0 / 2.0);
+		int aid = 1.0*t / (frameCount-1) * aFrame.size(), bid = 1.0*t / (frameCount-1) * bFrame.size();
 		if (aid >= aFrame.size()) aid = aFrame.size() - 1;
 		if (bid >= bFrame.size()) bid = bFrame.size() - 1;
 		std::vector<float> cur;
@@ -308,7 +310,7 @@ void FSM::setOffset(Frame f1, Frame f2) {
 		switch(cur->channelOrder[i]) {
 		case 0:
 			offset = glm::rotate(offset, 
-					0 * glm::radians(f2[i]),
+					glm::radians(f2[i]),
 					glm::vec3(1.0f, 0.0f, 0.0f)
 					) ;
 			break;
@@ -320,7 +322,7 @@ void FSM::setOffset(Frame f1, Frame f2) {
 			break;
 		case 2:
 			offset = glm::rotate(offset, 
-					0 * glm::radians(f2[i]),
+					glm::radians(f2[i]),
 					glm::vec3(0.0f, 0.0f, 1.0f)
 					) ;
 			break;
@@ -330,7 +332,7 @@ void FSM::setOffset(Frame f1, Frame f2) {
 		switch(cur->channelOrder[i]) {
 		case 0:
 			offset = glm::rotate(offset, 
-					0 * -glm::radians(f1[i]),
+					-glm::radians(f1[i]),
 					glm::vec3(1.0f, 0.0f, 0.0f)
 					) ;
 			break;
@@ -342,7 +344,7 @@ void FSM::setOffset(Frame f1, Frame f2) {
 			break;
 		case 2:
 			offset = glm::rotate(offset, 
-					0 * -glm::radians(f1[i]),
+					-glm::radians(f1[i]),
 					glm::vec3(0.0f, 0.0f, 1.0f)
 					) ;
 			break;
@@ -356,7 +358,7 @@ void FSM::setOffset(Frame f1, Frame f2) {
 
 void FSM::idle() {
 
-	timeCurr = glutGet(GLUT_ELAPSED_TIME);
+	timeCurr = glutGet(GLUT_ELAPSED_TIME) / 2;
 	if(timeCurr - timeBasee >= bvhs[0]->frameTime * 1000) {
 		timeBasee += bvhs[0]->frameTime * 1000;
 		frameIndex++;
@@ -372,24 +374,43 @@ void FSM::idle() {
 	}
 	if (stateCur == NANNAN) {
 		if (!isInterpolate) {
-			if (frameIndex >= blendMotion.size() - blendMotion.size() * 2 / 5) {
+			if (frameIndex >= blendMotion.size() - blendMotion.size() * STEP_RATIO) {
 				isInterpolate = true;
-				Frame curLast = blendMotion[blendMotion.size() - blendMotion.size() * 2 / 5 - 1];
+				Frame curLast = blendMotion[blendMotion.size() - blendMotion.size() * STEP_RATIO];
 				Motion prevMotion = blendMotion;
 				blendMotion = interpolateMotions(
 						walkMotions,					
 						Camera::walkVelocity, Camera::walkAngle);
 				interMotion = interpolateFrames(	
 					prevMotion, blendMotion,
-					prevMotion.size() * 2 / 5, blendMotion.size() * 2 / 5,
-					prevMotion.size() * 1 / 5 + blendMotion.size() * 1 / 5);
+					prevMotion.size() * STEP_RATIO, blendMotion.size() * STEP_RATIO,
+					prevMotion.size() * STEP_RATIO / 2 + blendMotion.size() * STEP_RATIO / 2);
 
 
-				float wbx = interMotion.back()[4];
-				float wbz = interMotion.back()[3];
+				float offset_b[3], offset_temp[3], offset_n[3];
+				for(int j = 0; j < 3; j++) {
+					offset_b[j] = interMotion.back()[j+3];
+					offset_temp[j] = blendMotion[blendMotion.size() * STEP_RATIO - 1][j+3];
+				}
+				auto mat_b = eulerAngleZ(
+						glm::radians(offset_temp[2]));
+				auto mat_n = eulerAngleXYZ(
+						glm::radians(offset_temp[0]), 
+						glm::radians(offset_temp[1]), 
+						glm::radians(offset_temp[2]));
+				glm::extractEulerAngleXYZ(mat_n * mat_b, offset_n[0], offset_n[1], offset_n[2]);
+				for(int j = 0; j < 3; j++) {
+					offset_n[j] = glm::degrees(offset_n[j]);
+				}
+				printf("offset_b: %f %f %f\n", offset_b[0], offset_b[1], offset_b[2]);
+				printf("offset_temp: %f %f %f\n", offset_temp[0], offset_temp[1], offset_temp[2]);
+				printf("offset_n: %f %f %f\n", offset_n[0], offset_n[1], offset_n[2]);
+				printf("offset: %f %f %f\n", offset[1][0], offset[1][1], offset[1][2]);
+
 				for(int i = 0; i < interMotion.size(); i++) {
-					interMotion[i][3] += (blendMotion[blendMotion.size() * 2 / 5 - 1][3] - wbz) * (i + 1.0) / interMotion.size();
-					interMotion[i][4] += (blendMotion[blendMotion.size() * 2 / 5 - 1][4] - wbx) * (i + 1.0) / interMotion.size();
+					for(int j = 0; j < 3; j++) {
+						interMotion[i][j+3] += (offset_n[j] - offset_b[j]) * (i + 1.0) / interMotion.size();
+					}
 				}
 				
 				puts("set offset 1");
@@ -399,10 +420,10 @@ void FSM::idle() {
 			}
 		} else {
 			if (frameIndex >= interMotion.size()) {
-				frameIndex = blendMotion.size() * 2 / 5;
+				frameIndex = blendMotion.size() * STEP_RATIO;
 				Frame curLast = interMotion.back();
 				puts("set offset 2");
-				setOffset(blendMotion[frameIndex], curLast);
+				setOffset(blendMotion[frameIndex - 1], curLast);
 				isInterpolate = false;
 			}
 		}

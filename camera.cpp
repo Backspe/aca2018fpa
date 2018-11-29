@@ -1,8 +1,8 @@
 #include "camera.h"
 
-vec3 Camera::cov = vec3(0.0f, 100.0f, 0.0f);
+vec3 Camera::cov = vec3(0.0f, 0.0f, 0.0f);
 vec3 Camera::cameraPlaneVec = vec3(0.0, 0.0, 1.0);
-float Camera::cameraDistance = 800;
+float Camera::cameraDistance = 1500;
 vec3 Camera::cameraUpVec = vec3(0.0, 1.0, 0.0);
 float Camera::fov = 45;
 quat Camera::trackballRot = glm::quat();
