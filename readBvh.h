@@ -8,6 +8,7 @@
 #include <fstream>
 #include <sstream>
 #include <vector>
+#include <map>
 #define PI 3.14159265358979
 #define DEBUG false
 
@@ -50,6 +51,7 @@ public:
 	int channelNum;
 	std::vector< Joint * > joints;
 	std::vector< EndSite * > ends;
+	std::map< std::string, Joint* > jointMap;
 
 	int frameCount;
 	float frameTime;
@@ -86,6 +88,7 @@ public:
 	Joint* parseJoint(int chan_num);
 	void parseMotion(BVH* root);
 	BVH* parse(const char* fileName);
+	void jointMapping(std::map< std::string, Joint* >* m, Joint* current);
 };
 
 #endif

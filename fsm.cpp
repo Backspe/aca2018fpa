@@ -226,21 +226,22 @@ void FSM::idle() {
 					prevMotion.size() * STEP_RATIO / 2 + blendMotion.size() * STEP_RATIO / 2);
 
 
-				float offset_b[3], offset_temp[3], offset_n[3];
+				double offset_b[3], offset_temp[3], offset_n[3];
 				for(int j = 0; j < 3; j++) {
 					offset_b[j] = interMotion.back()[j+3];
 					offset_temp[j] = blendMotion[blendMotion.size() * STEP_RATIO - 1][j+3];
 				}
 				auto mat_b = eulerAngleZ(
-						glm::radians(offset_temp[2]));
+						glm::radians(offset_b[2] - offset_temp[2]));
 				auto mat_n = eulerAngleXYZ(
 						glm::radians(offset_temp[0]), 
 						glm::radians(offset_temp[1]), 
 						glm::radians(offset_temp[2]));
-				glm::extractEulerAngleXYZ(mat_n * mat_b, offset_n[0], offset_n[1], offset_n[2]);
+				glm::extractEulerAngleXYZ(mat_b * mat_n, offset_n[0], offset_n[1], offset_n[2]);
 				for(int j = 0; j < 3; j++) {
 					offset_n[j] = glm::degrees(offset_n[j]);
 				}
+				printf("turn angle: %f\n", offset_b[2] - prevMotion[prevMotion.size() * STEP_RATIO][5]);
 				printf("offset_b: %f %f %f\n", offset_b[0], offset_b[1], offset_b[2]);
 				printf("offset_temp: %f %f %f\n", offset_temp[0], offset_temp[1], offset_temp[2]);
 				printf("offset_n: %f %f %f\n", offset_n[0], offset_n[1], offset_n[2]);
@@ -248,7 +249,7 @@ void FSM::idle() {
 
 				for(int i = 0; i < interMotion.size(); i++) {
 					for(int j = 0; j < 3; j++) {
-						interMotion[i][j+3] += (offset_n[j] - offset_b[j]) * (i + 1.0) / interMotion.size();
+						interMotion[i][j+3] += (offset_n[j] - offset_b[j]) * i / (interMotion.size() - 1);
 					}
 				}
 				

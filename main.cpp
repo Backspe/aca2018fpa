@@ -596,14 +596,6 @@ void drawBVH() {
 void initParam() {
 }
 
-void jointMapping(Joint* current) {
-	jointMap.insert(std::make_pair(current->name, current));
-	for(Joint* joint : current->joints) {
-		jointMapping(joint);
-	}
-
-}
-
 EndSite* sumTwoEndsite(EndSite* a, EndSite* b, double w) {
 	EndSite* ret = new EndSite();
 	ret = a;
@@ -670,10 +662,7 @@ int main(int argc, char **argv) {
 	bvh1=parser1.parse(file1);
 	
 	bvh = bvh1;
-
-	for(Joint* joint : bvh->joints) {
-		jointMapping(joint);
-	}
+	jointMap = bvh->jointMap;
 	
 	glutInit(&argc, argv);
 

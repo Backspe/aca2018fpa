@@ -168,7 +168,18 @@ BVH* Parser::parse(const char* fileName) {
 	parseMotion(root);
 	std::cout << "model has " << root->channelCountAll << " channels and " << root->frameCount << " frames" << std::endl;
 	ifs.close();
+
+	for(Joint* joint : root->joints) {
+		jointMapping(&(root->jointMap), joint);
+	}
 	return root;
+}
+
+void Parser::jointMapping(std::map< std::string, Joint* >* m, Joint* current) {
+	m->insert(std::make_pair(current->name, current));
+	for(Joint* joint : current->joints) {
+		jointMapping(m, joint);
+	}
 }
 
 /*
