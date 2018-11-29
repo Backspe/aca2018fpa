@@ -301,9 +301,10 @@ Motion interpolateFrames(Motion a, Motion b, int cntA, int cntB, int frameCount)
 				- (bFrame[bid][2] - bFrame[preBid][2]) * glm::sin(angle_b);
 		double move_z_c = move_z_a * (1.0 - w) + move_z_b * w;
 		double move_x_c = move_x_a * (1.0 - w) + move_x_b * w;
-		cur[2] = ret.back()[2] + move_z_c * cos(angle_c) - move_x_c * sin(angle_c);
-		cur[0] = ret.back()[0] + move_x_c * cos(angle_c) + move_z_c * sin(angle_c);
-
+		if (!ret.empty()) {
+			cur[2] = ret.back()[2] + move_z_c * cos(angle_c) - move_x_c * sin(angle_c);
+			cur[0] = ret.back()[0] + move_x_c * cos(angle_c) + move_z_c * sin(angle_c);
+		}
 		ret.push_back(cur);
 		preAid = aid;
 		preBid = bid;
