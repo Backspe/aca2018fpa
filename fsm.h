@@ -2,6 +2,7 @@
 #define FSM_H
 #include "readBvh.h"
 #include "camera.h"
+#include "util.h"
 
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
@@ -11,10 +12,6 @@
 #include <stdlib.h>
 
 #define STATE_NUM 16
-typedef std::vector< float > Frame;
-typedef std::vector< Frame > Motion;
-typedef std::vector< float > fVector;
-typedef std::vector< std::vector< float > > fMatrix;
 
 enum State {
 	STAND, JUMP1, JUMP2, START, STOP, STRAIGHT1, LEFT1, RIGHT1, STRAIGHT2, LEFT2, RIGHT2, STRAIGHT3, LEFT3, RIGHT3, BREAK, NANNAN
@@ -76,6 +73,8 @@ public:
 	void idle();
 	Frame getFrame();
 	Motion getMotion();
+	int timeCur;
+	int timeBase;
 };
 
 #endif

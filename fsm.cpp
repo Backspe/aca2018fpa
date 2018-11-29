@@ -1,171 +1,10 @@
 #include "fsm.h"
 
-int timeCurr = 0, timeBasee = 0;
+int timeCur = 0, timeBase = 0;
 std::vector< std::vector< Motion > > walkMotions;
 
 #define STEP_RATIO 0.45
 
-float surface(fMatrix points, float u, float v) {
-	fMatrix oldpoints = points;
-	while(oldpoints.size() > 1) {
-		fMatrix newpoints;
-		for(int i = 0; i < oldpoints.size() - 1; i++) {
-			fVector row;
-			for(int j = 0; j < oldpoints[0].size(); j++) {
-				row.push_back((1 - u) * oldpoints[i][j] + u * oldpoints[i+1][j]);
-			}
-			newpoints.push_back(row);
-		}
-		oldpoints = newpoints;
-	}
-	fVector oldrow = oldpoints[0];
-	while(oldrow.size() > 1) {
-		fVector row;
-		for(int i = 0; i < oldrow.size() - 1; i++) {
-			row.push_back((1 - v) * oldrow[i] + v * oldrow[i+1]);
-		}
-		oldrow = row;
-	}
-	return oldrow[0];
-}
-
-Motion interpolateMotions(std::vector< std::vector< Motion > > motions, float u, float v) {
-	
-	fMatrix motionSizes;
-	for(int i = 0; i < motions.size(); i++) {
-		fVector row;
-		for(int j = 0; j < motions[0].size(); j++) {
-			row.push_back(float(motions[i][j].size()));
-		}
-		motionSizes.push_back(row);
-	}
-
-	int frameCount = int(surface(motionSizes, u, v));
-
-	std::vector<std::vector<float> > ret;
-	const double Pi = acos(-1.0);
-	int preAid = 0, preBid = 0;
-	for(int t = 0; t < frameCount; t++) {
-		double w = 1 - (cos(Pi / frameCount * t) / 2.0 + 1.0 / 2.0);
-		std::vector< std::vector< int > > frameIds;
-		for(int i = 0; i < motions.size(); i++) {
-			std::vector< int > row;
-			for(int j = 0; j < motions[0].size(); j++) {
-				int frameId = 1.0 * t / frameCount * motions[i][j].size();
-				if (frameId >= motions[i][j].size()) frameId = motions[i][j].size() - 1;
-				row.push_back(frameId);
-			}
-			frameIds.push_back(row);
-		}
-		std::vector<float> cur;
-		std::vector<float> pre;
-		for (int idx = 0; idx < motions[0][0][0].size(); idx++) {
-			fMatrix fmat;
-			for(int ii = 0; ii < motions.size(); ii++) {
-				fVector row;
-				for(int jj = 0; jj < motions[ii].size(); jj++) {
-					row.push_back(motions[ii][jj][frameIds[ii][jj]][idx]);
-				}
-				fmat.push_back(row);
-			}
-			cur.push_back(surface(fmat, u, v));
-		}
-		ret.push_back(cur);
-	}
-	return ret;
-}
-
-Motion interpolateFrames(Motion a, Motion b, int cntA, int cntB, int frameCount = 60) {
-	Motion aFrame, bFrame;
-	for (int i = (int)a.size() - cntA; i < (int)a.size(); i++) {
-		aFrame.push_back(a[i]);
-	}
-	for (int i = 0; i < cntB; i++) {
-		bFrame.push_back(b[i]);
-	}
-	if (aFrame.empty()) aFrame.push_back(a.back());
-	if (bFrame.empty()) bFrame.push_back(b[0]);
-	Motion ret;
-	const double Pi = acos(-1.0);
-	int preAid = 0, preBid = 0;
-	for(int t = 0; t < frameCount; t++) {
-		double w = 1 - (cos(Pi / (frameCount-1) * t) / 2.0 + 1.0 / 2.0);
-		int aid = 1.0*t / (frameCount-1) * aFrame.size(), bid = 1.0*t / (frameCount-1) * bFrame.size();
-		if (aid >= aFrame.size()) aid = aFrame.size() - 1;
-		if (bid >= bFrame.size()) bid = bFrame.size() - 1;
-		std::vector<float> cur;
-		std::vector<float> pre;
-		/*
-		for(int j = 0; j < a->frames.back().size(); j++) {
-			if (j == 0 || j == 2) cur.push_back(a->frames.back()[j]);
-			else cur.push_back(a->frames.back()[j] * (1.0 - w) + b->frames[60][j] * w);
-		}*/
-		for (int j = 0; j < aFrame[aid].size(); j++) {
-			if (j == 0 || j == 2 || j == 5) {
-				if (ret.size() == 0) {
-					cur.push_back(aFrame[aid][j]);
-				} else {
-					cur.push_back(
-							ret.back()[j] +   
-							(aFrame[aid][j] - aFrame[preAid][j]) * (1 - w) + 
-							(bFrame[bid][j] - bFrame[preBid][j]) * w 
-							);
-				}
-			}
-			else cur.push_back(aFrame[aid][j] * (1.0 - w) + bFrame[bid][j] * w);
-		}
-		ret.push_back(cur);
-		preAid = aid;
-		preBid = bid;
-	}
-	return ret;
-}
-
-std::vector<std::vector<float> > interpolateFrames(BVH* a, BVH* b, int cntA, int cntB, int frameCount = 60) {
-	std::vector<std::vector<float> > aFrame, bFrame;
-	for (int i = (int)a->frames.size() - cntA; i < (int)a->frames.size(); i++) {
-		aFrame.push_back(a->frames[i]);
-	}
-	for (int i = 0; i < cntB; i++) {
-		bFrame.push_back(b->frames[i]);
-	}
-	if (aFrame.empty()) aFrame.push_back(a->frames.back());
-	if (bFrame.empty()) bFrame.push_back(b->frames[0]);
-	std::vector<std::vector<float> > ret;
-	const double Pi = acos(-1.0);
-	int preAid = 0, preBid = 0;
-	for(int t = 0; t < frameCount; t++) {
-		double w = 1 - (cos(Pi / frameCount * t) / 2.0 + 1.0 / 2.0);
-		int aid = 1.0*t / frameCount * aFrame.size(), bid = 1.0*t / frameCount * bFrame.size();
-		if (aid >= aFrame.size()) aid = aFrame.size() - 1;
-		if (bid >= bFrame.size()) bid = bFrame.size() - 1;
-		std::vector<float> cur;
-		std::vector<float> pre;
-		/*
-		for(int j = 0; j < a->frames.back().size(); j++) {
-			if (j == 0 || j == 2) cur.push_back(a->frames.back()[j]);
-			else cur.push_back(a->frames.back()[j] * (1.0 - w) + b->frames[60][j] * w);
-		}*/
-		for (int j = 0; j < aFrame[aid].size(); j++) {
-			if (j == 0 || j == 2 || j == 5) {
-				if (ret.size() == 0) {
-					cur.push_back(aFrame[aid][j]);
-				} else {
-					cur.push_back(
-							ret.back()[j] +   
-							(aFrame[aid][j] - aFrame[preAid][j]) * (1 - w) + 
-							(bFrame[bid][j] - bFrame[preBid][j]) * w 
-							);
-				}
-			}
-			else cur.push_back(aFrame[aid][j] * (1.0 - w) + bFrame[bid][j] * w);
-		}
-		ret.push_back(cur);
-		preAid = aid;
-		preBid = bid;
-	}
-	return ret;
-}
 
 FSM::FSM() {
 	for(int i = 0; i < STATE_NUM; i++) {
@@ -358,13 +197,13 @@ void FSM::setOffset(Frame f1, Frame f2) {
 
 void FSM::idle() {
 
-	timeCurr = glutGet(GLUT_ELAPSED_TIME) / 2;
-	if(timeCurr - timeBasee >= bvhs[0]->frameTime * 1000) {
-		timeBasee += bvhs[0]->frameTime * 1000;
+	timeCur = glutGet(GLUT_ELAPSED_TIME) / 2;
+	if(timeCur - timeBase >= bvhs[0]->frameTime * 1000) {
+		timeBase += bvhs[0]->frameTime * 1000;
 		frameIndex++;
 		printf("u, v = %f, %f\n", Camera::walkVelocity, Camera::walkAngle);
 	}
-//	frameIndex++; //TODO 시간 고려하기
+//	frameIndex++;
 	if (stateNext == NANNAN && stateCur != NANNAN) {
 		stateCur = NANNAN;
 		blendMotion = interpolateMotions(

@@ -1,6 +1,6 @@
 CXX = g++
-OBJS = camera.o readBvh.o fsm.o acahw4.o 
-TARGET = hw4
+OBJS = camera.o readBvh.o util.o fsm.o main.o 
+TARGET = hw5
 CXXFLAGS = -std=c++11 -I ./eigen/ -lglut -lGLU -lGL
 LINKER = -Xlinker
  

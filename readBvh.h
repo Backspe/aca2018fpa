@@ -11,6 +11,9 @@
 #define PI 3.14159265358979
 #define DEBUG false
 
+typedef std::vector< float > Frame;
+typedef std::vector< Frame > Motion;
+
 class EndSite {
 public:
 	float offset[3];
