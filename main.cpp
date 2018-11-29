@@ -1,16 +1,13 @@
 #include "readBvh.h"
 #include "camera.h"
 #include "fsm.h"
+#include "util.h"
 
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
 #include "glm/gtx/quaternion.hpp"
 #include <GL/glut.h>
-
-#include <Eigen/Core>
-#include <Eigen/Dense>
-#include <Eigen/SVD>
 
 #include <math.h>
 #include <stdio.h>
@@ -24,10 +21,8 @@
 
 
 using namespace glm;
-using namespace Eigen;
 
 float modelscale = 1.0f;
-int timeCur = 0, timeBase;
 int slice = 20;
 
 
@@ -75,172 +70,6 @@ int frameIndex = 0;
 std::vector< float > frameCur;
 
 Joint* selectedJoint;
-
-//copy from http://eigen.tuxfamily.org/bz/show_bug.cgi?id=257
-template<typename _Matrix_Type_>
-_Matrix_Type_ pseudoInverse(const _Matrix_Type_ &a, double epsilon = std::numeric_limits<double>::epsilon())
-{
-	Eigen::JacobiSVD< _Matrix_Type_ > svd(a ,Eigen::ComputeThinU | Eigen::ComputeThinV);
-	double tolerance = epsilon * std::max(a.cols(), a.rows()) *svd.singularValues().array().abs()(0);
-	return svd.matrixV() * (svd.singularValues().array().abs() > tolerance).select(svd.singularValues().array().inverse(), 0).matrix().asDiagonal() * svd.matrixU().adjoint();
-}
-
-glm::mat4 fk(Joint* current) {	
-	
-	glm::mat4 pos = glm::mat4(1.0f);
-	glm::mat4 defaultmat = glm::mat4(1.0f);
-	pos = glm::translate(defaultmat, 
-			glm::vec3(current->offset[0], current->offset[1], current->offset[2])
-			) * pos;
-
-	
-	Joint* par = current->parent;
-	while(par != NULL) {
-		for(int i = par->channelCount - 1; i >= 0; i--) {
-			switch(par->channelOrder[i]) {
-				case 0:
-					pos = glm::rotate(defaultmat, 
-							glm::radians(frameCur[par->channelNum + i]),
-							glm::vec3(1.0f, 0.0f, 0.0f)
-							) * pos;
-					break;
-				case 1:
-					pos = glm::rotate(defaultmat, 
-							glm::radians(frameCur[par->channelNum + i]),
-							glm::vec3(0.0f, 1.0f, 0.0f)
-							) * pos;
-					break;
-				case 2:
-					pos = glm::rotate(defaultmat, 
-							glm::radians(frameCur[par->channelNum + i]),
-							glm::vec3(0.0f, 0.0f, 1.0f)
-							) * pos;
-					break;
-				case 3:
-					pos = glm::translate(defaultmat, 
-							glm::vec3(frameCur[par->channelNum + i], 0.0f, 0.0f)
-							) * pos;
-					break;
-				case 4:
-					pos = glm::translate(defaultmat, 
-							glm::vec3(0.0f, frameCur[par->channelNum + i], 0.0f)
-							) * pos;
-					break;
-				case 5:
-					pos = glm::translate(defaultmat, 
-							glm::vec3(0.0f, 0.0f, frameCur[par->channelNum + i])
-							) * pos;
-					break;
-				default:
-					printf("error!\n");
-					exit(1);
-			}
-		}
-		pos = glm::translate(defaultmat, 
-				glm::vec3(par->offset[0], par->offset[1], par->offset[2])
-				) * pos;
-
-		par = par->parent;
-	}
-	for(int i = bvh->channelCount - 1; i >= 0; i--) {
-		switch(bvh->channelOrder[i]) {
-			case 0:
-				pos = glm::rotate(defaultmat, 
-						glm::radians(frameCur[bvh->channelNum + i]),
-						glm::vec3(1.0f, 0.0f, 0.0f)
-						) * pos;
-				break;
-			case 1:
-				pos = glm::rotate(defaultmat, 
-						glm::radians(frameCur[bvh->channelNum + i]),
-						glm::vec3(0.0f, 1.0f, 0.0f)
-						) * pos;
-				break;
-			case 2:
-				pos = glm::rotate(defaultmat, 
-						glm::radians(frameCur[bvh->channelNum + i]),
-						glm::vec3(0.0f, 0.0f, 1.0f)
-						) * pos;
-				break;
-			case 3:
-				pos = glm::translate(defaultmat, 
-						glm::vec3(frameCur[bvh->channelNum + i], 0.0f, 0.0f)
-						) * pos;
-				break;
-			case 4:
-				pos = glm::translate(defaultmat, 
-						glm::vec3(0.0f, frameCur[bvh->channelNum + i], 0.0f)
-						) * pos;
-				break;
-			case 5:
-				pos = glm::translate(defaultmat, 
-						glm::vec3(0.0f, 0.0f, frameCur[bvh->channelNum + i])
-						) * pos;
-				break;
-			default:
-				printf("error!\n");
-				exit(1);
-		}
-	}
-	pos = glm::translate(defaultmat, 
-			glm::vec3(bvh->offset[0], bvh->offset[1], bvh->offset[2])
-			) * pos;
-	//std::cout << current->name << " " << pos[3][0] << " " << pos[3][1] << " " << pos[3][2] << " " << pos[3][3] << std::endl;
-
-	return pos;
-}
-
-void ik(Joint* current) {
-	glm::mat4 curMat = fk(current);
-	Joint* par = current->parent;
-	std::vector< glm::vec3 > jacobianList;
-	
-	std::vector< int > thetas;
-	std::vector< double > dthetas;
-	int depth = 1;
-	while(par != NULL && depth <= camera.maxDepth) {
-		glm::mat4 parMat = fk(par);
-		glm::vec3 p = glm::vec3(curMat[3] - parMat[3]);
-		for(int i = 0; i < par->channelCount; i++) {
-			switch(par->channelOrder[i]) {
-				case 0:
-				case 1:
-				case 2:
-					jacobianList.push_back(glm::cross(vec3(parMat[par->channelOrder[i]]), p));
-					thetas.push_back(par->channelNum + i);
-					break;
-				default:
-					printf("error!\n");
-					exit(1);
-			}
-		}
-		par = par->parent;
-		depth++;
-	}
-	int n = thetas.size();
-	Eigen::MatrixXd jacobianMat(3, n);
-	for(int i = 0; i < n; i++) {
-		jacobianMat.col(i) << jacobianList[i].x, jacobianList[i].y, jacobianList[i].z;
-	}
-	Eigen::MatrixXd psj = pseudoInverse(jacobianMat);
-	for(int i = 0; i < n; i++) {
-		glm::vec3 r = glm::vec3(psj(i, 0), psj(i, 1), psj(i, 2));
-
-		double dt = glm::degrees(glm::dot(r, camera.movement));
-		if(dt > 45 || dt < -45) { // avoid ill-condition
-			std::cout << "ill-conditioned" << std::endl;
-			break; 
-		}
-		dthetas.push_back(dt);
-	}
-	if(dthetas.size() == n) {
-		for(int i = 0; i < n; i++) {
-			frameCur[thetas[i]] += dthetas[i];
-		}
-	}
-	
-}
-
 
 // >< 눈
 void eye(double rad) {
@@ -323,6 +152,7 @@ void drawCube(float width, float height, float thick, float offsetx, float offse
     glEnd();	
 	glPopMatrix();
 }
+
 void glmVertex(glm::mat4 &mat) {
 	glm::vec4 v = mat * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 	glVertex3f(v.x, v.y, v.z);
@@ -680,7 +510,7 @@ void drawBVH() {
 		selectedJoint = jointMap.find(camera.selectedJointName)->second;
 	}*/
 		
-//	ik(selectedJoint); // set current frame's channel in hw3
+//	ik(bvh, selectedJoint, frameCur); // set current frame's channel in hw3
 
 
 
@@ -766,14 +596,6 @@ void drawBVH() {
 void initParam() {
 }
 
-void jointMapping(Joint* current) {
-	jointMap.insert(std::make_pair(current->name, current));
-	for(Joint* joint : current->joints) {
-		jointMapping(joint);
-	}
-
-}
-
 EndSite* sumTwoEndsite(EndSite* a, EndSite* b, double w) {
 	EndSite* ret = new EndSite();
 	ret = a;
@@ -840,16 +662,13 @@ int main(int argc, char **argv) {
 	bvh1=parser1.parse(file1);
 	
 	bvh = bvh1;
-
-	for(Joint* joint : bvh->joints) {
-		jointMapping(joint);
-	}
+	jointMap = bvh->jointMap;
 	
 	glutInit(&argc, argv);
 
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
 	glutInitWindowSize(800, 600);
-	glutCreateWindow("Animation HW4 2018-23598, 2017-259690");
+	glutCreateWindow("Animation HW5 2018-23598, 2017-25969");
 
 	glutSpecialFunc(camera.specialKeyboardHandler);
 	glutKeyboardFunc(camera.keyboardHandler);
