@@ -270,6 +270,13 @@ Motion interpolateFrames(Motion a, Motion b, int cntA, int cntB, int frameCount)
 							(aFrame[aid][j] - aFrame[preAid][j]) * (1 - w) + 
 							(bFrame[bid][j] - bFrame[preBid][j]) * w 
 							);
+					/*
+					cur.push_back(
+							aFrame[0][j] +   
+							(aFrame[aid][j] - aFrame[0][j]) * (1 - w) + 
+							(bFrame[bid][j] - bFrame[0][j]) * w 
+							);
+					*/
 				}
 			}
 			else cur.push_back(aFrame[aid][j] * (1.0 - w) + bFrame[bid][j] * w);
