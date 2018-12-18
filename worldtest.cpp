@@ -8,7 +8,7 @@
 #include "sim/fem/World.h"
 #include "sim/Cloth.h"
 
-int main() {
+int main2() {
 	FEM::World*	mSoftWorld;
 	Cloth* mCloth;
 	mSoftWorld = new FEM::World(

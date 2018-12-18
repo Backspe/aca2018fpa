@@ -19,6 +19,9 @@
 
 #define PI 3.14159265358979
 
+#include "sim/fem/Constraint/ConstraintHeader.h"
+#include "sim/fem/World.h"
+#include "sim/Cloth.h"
 
 using namespace glm;
 
@@ -71,6 +74,9 @@ std::vector< float > frameCur;
 
 Joint* selectedJoint;
 
+FEM::World*	mSoftWorld;
+Cloth* mCloth;
+
 // >< 눈
 void eye(double rad) {
 	glPushMatrix();
@@ -107,6 +113,23 @@ void mouth(double rad) {
 	}
 	glEnd();
 	glPopMatrix();
+}
+
+std::vector< glm::mat4 > getCube(float width, float height, float thick, float offsetx, float offsety, float offsetz) {
+	width = width / 2;
+	thick = thick / 2;
+	glm::mat4 mat = glm::mat4(1.0f);
+	mat = glm::translate(mat, glm::vec3(offsetx, offsety, offsetz));
+	std::vector< glm::mat4 > ret;
+	ret.push_back(glm::translate(mat, glm::vec3( width, 0.0f, thick)));
+	ret.push_back(glm::translate(mat, glm::vec3(-width, 0.0f, thick)));
+	ret.push_back(glm::translate(mat, glm::vec3(-width, 0.0f,-thick)));
+	ret.push_back(glm::translate(mat, glm::vec3( width, 0.0f,-thick)));
+	ret.push_back(glm::translate(mat, glm::vec3( width, height, thick)));
+	ret.push_back(glm::translate(mat, glm::vec3( width, height,-thick)));
+	ret.push_back(glm::translate(mat, glm::vec3(-width, height,-thick)));
+	ret.push_back(glm::translate(mat, glm::vec3(-width, height, thick)));
+	return ret;
 }
 
 // make cube, pivot is centor of bottom
@@ -311,6 +334,54 @@ void drawBody() {
     glEnd();	
 
 	glPopMatrix();
+}
+
+std::vector< glm::mat4 > getJointRect(Joint* current) {
+	std::vector< glm::mat4 > ret;
+	if(current->name.compare("lfemur") == 0 || current->name.compare("rfemur") == 0) {
+		ret = getCube(-legThick, jointMap.find("ltibia")->second->offset[1] + femurRad + tibiaRad, legThick, 0, -femurRad, 0);
+
+	}
+	if(current->name.compare("ltibia") == 0 || current->name.compare("rtibia") == 0) {
+		ret = getCube(-legThick, jointMap.find("lfoot")->second->offset[1] + tibiaRad + footRad, legThick, 0, -tibiaRad, 0);
+	}
+	if(current->name.compare("lfoot") == 0 || current->name.compare("rfoot") == 0) {
+		glm::mat4 matRot = glm::rotate(glm::mat4(1.0), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+		ret = getCube(footWidth, jointMap.find("ltoes")->second->offset[2] - footRad - toesRad, footThick, 0, footRad, 0);
+		for(int i = 0; i < ret.size(); i++) {
+			ret[i] = matRot * ret[i];
+		}
+	}
+	if(current->name.compare("ltoes") == 0 || current->name.compare("rtoes") == 0) {
+		glm::mat4 matRot = glm::rotate(glm::mat4(1.0), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+		ret = getCube(footWidth, toesLength - toesRad, footThick, 0, toesRad, 0);
+		for(int i = 0; i < ret.size(); i++) {
+			ret[i] = matRot * ret[i];
+		}
+	}
+
+	if(current->name.compare("lhumerus") == 0 || current->name.compare("rhumerus") == 0) {
+		ret = getCube(-armThick, jointMap.find("lradius")->second->offset[1] + humerusRad + radiusRad, armThick, 0, -humerusRad, 0);
+
+	}
+	if(current->name.compare("lradius") == 0 || current->name.compare("rradius") == 0) {
+		ret = getCube(-armThick, jointMap.find("lhand")->second->offset[1] + radiusRad + handRad, armThick, 0, -radiusRad, 0);
+	}
+	if(current->name.compare("lhand") == 0 || current->name.compare("rhand") == 0) {
+		ret = getCube(-handThick, -handLength + handRad, handWidth, 0, -handRad, 0);
+	}
+	if(current->name.compare("head") == 0) {
+		ret = getCube(neckRad*2, neckRad + headRad, neckRad*2, 0, 0, 0);
+	}
+	if(current->name.compare("thorax") == 0) {
+		ret = getCube(bodyWidth, jointMap.find("lclavicle")->second->offset[1] - thoraxRad, bodyThick, 0, thoraxRad, 0);
+	}
+	glm::mat4 fkmat = fk(bvh, current, frameCur);
+	for(int i = 0; i < ret.size(); i++) {
+		ret[i] = fkmat * ret[i];
+		ret[i] = fsm.offset * ret[i];
+	}
+	return ret;
 }
 
 void drawJoint(Joint* current) {
@@ -592,63 +663,84 @@ void drawBVH() {
 //	glutPostRedisplay();
 }
 
+void drawWorld() {
+	BVH* current = bvh;
+	frameCur = bvh->frames[0];
+	//if (drawIdx == frames.size()) drawIdx = 0;
+
+	/*
+	fsm.idle();
+	if(fsm.isInterpolate) {
+		if(fsm.frameIndex != prevfi)
+			printf("state: %d->%d, frameIndex: %d/%lu, command: '%c'\n", fsm.stateCur, fsm.stateNext, fsm.frameIndex, fsm.getMotion().size(), Camera::command);
+	} else {
+		if(fsm.frameIndex != prevfi)
+			printf("state: %d, frameIndex: %d/%lu, command: '%c'\n", fsm.stateCur, fsm.frameIndex, fsm.getMotion().size(), Camera::command);
+	}
+	prevfi = fsm.frameIndex;
+	frameCur = fsm.getFrame();
+	*/
+
+	jointIndex = 0;
+
+	camera.resize(glutGet(GLUT_WINDOW_WIDTH), glutGet(GLUT_WINDOW_HEIGHT));
+	//뒷배경 
+	glClearColor(0.3, 0.3, 0.3, 1);
+
+	glMatrixMode(GL_MODELVIEW);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	glPolygonMode(GL_FRONT, GL_FILL);
+	glPolygonMode(GL_BACK, GL_FILL);
+
+	glPushMatrix();
+	glScalef(modelscale, modelscale, modelscale);
+
+	glPushMatrix();
+
+	const auto& particles = mSoftWorld->mX;
+	for(int i = 0; i < 100; i++) {
+		auto p = particles.block<3,1>(3*i,0);
+		glColor3f(0.35f, 0.35f, 0.80f);
+		glBegin(GL_POINTS);
+		glPointSize(100.0f);
+		glVertex3d(p[0], p[1], p[2]);
+		glEnd();
+		glTranslated(p[0], p[1], p[2]);
+		glutSolidSphere(thoraxRad, slice, 10);
+		glTranslated(-p[0], -p[1], -p[2]);
+	}
+
+	printf("JOINT CHECK -------\n");
+	for(auto const& x : current->jointMap) {
+		auto* joint = x.second;
+		std::vector< glm::mat4 > vers = getJointRect(joint);
+		std::cout << "JOINT " << joint->name << std::endl;
+		if(vers.size() > 0) {
+			std::cout << vers[0][3][0] << ", "<< vers[0][3][1] << ", " << vers[0][3][2] << std::endl;
+		}
+		for(auto ver : vers) {
+			auto p = ver[3];
+			glTranslated(p[0], p[1], p[2]);
+			glutSolidSphere(thoraxRad, slice, 10);
+			glTranslated(-p[0], -p[1], -p[2]);
+		}
+	}
+	
+
+	glPopMatrix();
+
+	glPopMatrix();
+
+	glutSwapBuffers();
+	//std::cout << camera.movement.x << " " << camera.movement.y << " " << camera.movement.z << std::endl;
+	camera.movement = glm::vec3(0.0f, 0.0f, 0.0f);
+	mSoftWorld->TimeStepping();
+}
 
 void initParam() {
 }
 
-EndSite* sumTwoEndsite(EndSite* a, EndSite* b, double w) {
-	EndSite* ret = new EndSite();
-	ret = a;
-	for(int i = 0; i < 3; i++) {
-		ret->offset[i] = a->offset[i] * (1.0 - w) + b->offset[i] * w;
-	}
-	return ret;
-}
-
-Joint* sumTwoJoint(Joint* a, Joint* b, double w) {
-	Joint* ret = new Joint(a->name);
-	ret = a;
-	for(int i = 0; i < 3; i++) {
-		ret->offset[i] = a->offset[i] * (1.0 - w) + b->offset[i] * w;
-		ret->rotation[i] = a->rotation[i] * (1.0 - w) + b->rotation[i] * w;
-	}
-	for(int i = 0; i < a->joints.size(); i++) {
-		ret->joints[i] = sumTwoJoint(a->joints[i], b->joints[i], w);
-	}
-	for(int i = 0; i < a->ends.size(); i++) {
-		ret->ends[i] = sumTwoEndsite(a->ends[i], b->ends[i], w);
-	}
-	return ret;
-}
-
-BVH* sumTwoBVH(BVH* a, BVH* b, double w) {
-	BVH* ret = new BVH(a->name);
-	ret = a;
-	for(int i = 0; i < 3; i++) {
-		ret->offset[i] = a->offset[i] * (1.0 - w) + b->offset[i] * w;
-		ret->position[i] = a->position[i] * (1.0 - w) + b->position[i] * w;
-		ret->rotation[i] = a->rotation[i] * (1.0 - w) + b->position[i] * w;
-	}
-	for(int i = 0; i < a->joints.size(); i++) {
-		ret->joints[i] = sumTwoJoint(a->joints[i], b->joints[i], w);
-	}
-	for(int i = 0; i < a->ends.size(); i++) {
-		ret->ends[i] = sumTwoEndsite(a->ends[i], b->ends[i], w);
-	}
-/*	
-	for(int i = 0; i < 6; i++) {
-		ret->channelOrder[i] = a->channelOrder[i];
-	}
-	ret->channelCount = a->channelCount;
-	ret->channelCountAll = a->channelCountAll;
-	ret->channelNum = a->channelNum;
-	for(int i = 0; i < a->joints.size(); i++) {
-		Joint* newJoint = sumTwoJoint(a->joints[i], b->joints[i], w);
-		ret->joints.push_back(newJoint);
-	}
-*/	
-	return ret;
-}
 
 // 메인 함수
 int main(int argc, char **argv) {
@@ -663,6 +755,20 @@ int main(int argc, char **argv) {
 	
 	bvh = bvh1;
 	jointMap = bvh->jointMap;
+
+	//init world
+	mSoftWorld = new FEM::World(
+		FEM::IntegrationMethod::PROJECTIVE_DYNAMICS,	//Integration Method
+		FEM::OptimizationMethod::OPTIMIZATION_METHOD_NEWTON,
+		FEM::LinearSolveType::SOLVER_TYPE_LDLT,
+		1.0/10.0,										//time_step
+		100, 											//max_iteration	
+		0.99											//damping_coeff
+		);
+
+	mCloth = new Cloth();
+	mCloth->Initialize(mSoftWorld);
+	mSoftWorld->Initialize();
 	
 	glutInit(&argc, argv);
 
@@ -672,8 +778,8 @@ int main(int argc, char **argv) {
 
 	glutSpecialFunc(camera.specialKeyboardHandler);
 	glutKeyboardFunc(camera.keyboardHandler);
-	glutDisplayFunc(drawBVH);
-	glutIdleFunc(drawBVH);
+	//glutDisplayFunc(drawWorld);
+	glutIdleFunc(drawWorld);
 	glutReshapeFunc(camera.resize);
 	glutMouseFunc(camera.mouseHandler);
 	glutMotionFunc(camera.mouseDragHandler);

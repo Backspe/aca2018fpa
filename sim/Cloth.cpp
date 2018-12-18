@@ -13,7 +13,7 @@ Cloth::
 Initialize(FEM::World* world)
 {
 	Eigen::Affine3d T=Eigen::Affine3d::Identity();
-	mMesh = new GridMesh(10,10,10.0,10.0,Eigen::Vector3d(-1.0,1.0,0),T);	
+	mMesh = new GridMesh(10,10,100.0,100.0,Eigen::Vector3d(-1.0,1.0,0),T);	
 
 	const auto& particles = mMesh->GetParticles();
 	const auto& springs = mMesh->GetSprings();
