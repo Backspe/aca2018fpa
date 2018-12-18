@@ -1,6 +1,6 @@
 CXX = g++
-OBJS = camera.o readBvh.o util.o fsm.o main.o 
-TARGET = hw5
+OBJS = sim/fem/Mesh/Mesh.o sim/fem/Mesh/GridMesh.o sim/fem/Constraint/Constraint.o sim/fem/Constraint/SpringConstraint.o sim/fem/Constraint/AttachmentConstraint.o sim/fem/World.o sim/Cloth.o worldtest.o
+TARGET = hw6
 CXXFLAGS = -std=c++11 -I ./eigen/ -lglut -lGLU -lGL
 LINKER = -Xlinker
  
