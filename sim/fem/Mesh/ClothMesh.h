@@ -14,6 +14,7 @@ public:
 	//std::vector<Eigen::Vector3d> mParticles;
 	//std::vector<Eigen::Vector3d> mSprings;
 	//GetParticles(), GetSprings(), Clear()
+	std::vector<Eigen::Vector3d> mpp;
 	std::vector<std::vector<int> > mSquares;
 	std::vector<std::vector<int> > GetSquares(){return mSquares;}
 	map<ip,int> d;

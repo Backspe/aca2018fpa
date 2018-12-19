@@ -33,6 +33,8 @@ int slice = 20;
 
 const double bodyWidth = 25;
 const double bodyThick = 15;
+const double bodyWidth2 = 35;
+const double bodyThick2 = 25;
 
 const double thoraxRad = 3.0;
 
@@ -59,7 +61,7 @@ const double footRad = 1.5;
 const double toesRad = 0.75;
 
 const double eps = 0.1;
-double world_timestep = 1.0/150.0;
+double world_timestep = 1.0/301.0;
 
 // 각도 관련 변수
 
@@ -187,8 +189,8 @@ void glmVertex(glm::mat4 &mat) {
 
 void drawBody() {
 	
-	float width = bodyWidth / 2;
-	float thick = bodyThick / 2;
+	float width = bodyWidth / 3;
+	float thick = bodyThick / 3;
 	Joint* thorax = jointMap.find("thorax")->second;
 	Joint* lclavicle = jointMap.find("lclavicle")->second;
 	Joint* rclavicle = jointMap.find("rclavicle")->second;
@@ -378,7 +380,7 @@ std::vector< glm::mat4 > getJointRect(Joint* current) {
 		ret = getCube(neckRad*2, neckRad + headRad, neckRad*2, 0, 0, 0);
 	}
 	if(current->name.compare("thorax") == 0) {
-		ret = getCube(bodyWidth, jointMap.find("head")->second->offset[1], bodyThick, 0, 0, 0);
+		ret = getCube(bodyWidth2, jointMap.find("head")->second->offset[1]+jointMap["thorax"]->offset[1], bodyThick2, 0, -jointMap["thorax"]->offset[1], 0);
 	}
 
 
@@ -592,63 +594,8 @@ int prevfi = -1;
 int frameC = 0;
 
 void drawBVH() {
+
 	BVH* current = bvh;
-	//frameCur = frames[drawIdx++];
-	//if (drawIdx == frames.size()) drawIdx = 0;
-
-	fsm.idle();
-	if(fsm.isInterpolate) {
-		if(fsm.frameIndex != prevfi)
-			printf("state: %d->%d, frameIndex: %d/%lu, command: '%c'\n", fsm.stateCur, fsm.stateNext, fsm.frameIndex, fsm.getMotion().size(), Camera::command);
-	} else {
-		if(fsm.frameIndex != prevfi)
-			printf("state: %d, frameIndex: %d/%lu, command: '%c'\n", fsm.stateCur, fsm.frameIndex, fsm.getMotion().size(), Camera::command);
-	}
-	prevfi = fsm.frameIndex;
-	frameCur = fsm.getFrame();
-
-//	BVH* current = interpolated[drawIdx++];
-//	if (drawIdx == interpolated.size()) drawIdx = 0;
-//	usleep(1000);
-
-
-    /* hw2
-	timeCur = glutGet(GLUT_ELAPSED_TIME);
-	while(timeCur - timeBase >= bvh->frameCount * bvh->frameTime * 1000) {
-		timeBase += bvh->frameCount * bvh->frameTime * 1000;
-	}
-	frameIndex = (int) ((timeCur - timeBase) / bvh->frameTime / 1000); 
-
-	frameCur = bvh->frames[frameIndex]; // set current frame's channel in hw2
-	*/
-
-    /* hw3 */
-	//frameCur recalculate by jacobian
-	/*
-	if(selectedJoint->name.compare(camera.selectedJointName) != 0) {
-		std::cout << camera.selectedJointName << std::endl;
-		selectedJoint = jointMap.find(camera.selectedJointName)->second;
-	}*/
-		
-//	ik(bvh, selectedJoint, frameCur); // set current frame's channel in hw3
-
-
-
-	jointIndex = 0;
-
-	camera.resize(glutGet(GLUT_WINDOW_WIDTH), glutGet(GLUT_WINDOW_HEIGHT));
-	//뒷배경 
-	glClearColor(0.3, 0.3, 0.3, 1);
-
-	glMatrixMode(GL_MODELVIEW);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	glPolygonMode(GL_FRONT, GL_FILL);
-	glPolygonMode(GL_BACK, GL_FILL);
-
-	glPushMatrix();
-	glScalef(modelscale, modelscale, modelscale);
-
 	glPushMatrix();
 
 
@@ -701,15 +648,9 @@ void drawBVH() {
 		drawBVHEndSite(endSite);
 	}
 
-	glPopMatrix();
 
 	glPopMatrix();
 
-	glutSwapBuffers();
-	//std::cout << camera.movement.x << " " << camera.movement.y << " " << camera.movement.z << std::endl;
-	camera.movement = glm::vec3(0.0f, 0.0f, 0.0f);
-
-//	glutPostRedisplay();
 }
 
 std::map< std::string, std::vector< glm::mat4 >  > PreVersMap;
@@ -806,6 +747,8 @@ void drawWorld() {
 
 	int maxCount = int(bvh->frameTime/world_timestep);
 	std::cout<< "maxcount: " << maxCount << std::endl;
+	int nn = 8;
+	int mm = 8;
 	
 	for(int timecount = 1; timecount <= int(bvh->frameTime/world_timestep); timecount++){
 
@@ -817,7 +760,7 @@ void drawWorld() {
 			std::vector< glm::mat4 >& vers1 = PreVersMap[x.first], &vers2 = CurVersMap[x.first];
 			
 			if(name_ == "thorax") {
-				attachIdx.push_back(132); attachIdx.push_back(143); attachIdx.push_back(144); attachIdx.push_back(155);
+				attachIdx.push_back((nn-1)*mm); attachIdx.push_back(nn*mm-1); attachIdx.push_back(nn*mm); attachIdx.push_back((nn+1)*mm-1);
 				attachTarget.push_back(Eigen::Vector3d(vers2[7][3][0],vers2[7][3][1],vers2[7][3][2]));
 				attachTarget.push_back(Eigen::Vector3d(vers2[4][3][0],vers2[4][3][1],vers2[4][3][2]));
 				attachTarget.push_back(Eigen::Vector3d(vers2[6][3][0],vers2[6][3][1],vers2[6][3][2]));
@@ -834,7 +777,7 @@ void drawWorld() {
 			}
 			
 			for(int i = 0; i < particles.size()/3; i++) {
-				if(i==132 || i==143 || i==144 || i==155) continue;
+				if(i==(nn-1)*mm || i==nn*mm-1 || i==nn * mm || i==(nn+1)*mm-1) continue;
 				bool in = true;
 				double dis = 1e9;
 				p pn;
@@ -903,16 +846,16 @@ void drawWorld() {
 					double vx = mSoftWorld->mV[3*i], vy = mSoftWorld->mV[3*i+1], vz = mSoftWorld->mV[3*i+2];
 					p v(vx,vy,vz);
 					p nv = v-pn*(pn*v)*(1.0+eps);
-					std::cout << "collision with " << name_ << " - " << i << " : move to " << pn.x << ", " << pn.y << ", " << pn.z << " with dist " << dis << "\n";
-					std::cout << "v : " << v.x << ", " << v.y << ", " << v.z << "\n";
-					std::cout << "nv : " << nv.x << ", " << nv.y << ", " << nv.z << "\n";
+//					std::cout << "collision with " << name_ << " - " << i << " : move to " << pn.x << ", " << pn.y << ", " << pn.z << " with dist " << dis << "\n";
+//					std::cout << "v : " << v.x << ", " << v.y << ", " << v.z << "\n";
+//					std::cout << "nv : " << nv.x << ", " << nv.y << ", " << nv.z << "\n";
 
 //					mSoftWorld->mV[3*i] = nv.x;
 //					mSoftWorld->mV[3*i+1] = nv.y;
 //					mSoftWorld->mV[3*i+2] = nv.z;
-					mSoftWorld->mX[3*i] += dis*pn.x * 1.0;
-					mSoftWorld->mX[3*i+1] += dis*pn.y * 1.0;
-					mSoftWorld->mX[3*i+2] += dis*pn.z * 1.0;
+					mSoftWorld->mX[3*i] += dis*pn.x * 1.2;
+					mSoftWorld->mX[3*i+1] += dis*pn.y * 1.2;
+					mSoftWorld->mX[3*i+2] += dis*pn.z * 1.2;
 
 					double tx = mSoftWorld->mX[3*i], ty = mSoftWorld->mX[3*i+1], tz = mSoftWorld->mX[3*i+2];
 					attachIdx.push_back(i);
@@ -948,7 +891,28 @@ void drawWorld() {
 		mSoftWorld->PreComputation();
 	}
 
+	std::vector<Eigen::Vector3d> verts;
+
+	for(int i = 0; i < particles.size() / 3; i++) {
+		verts.push_back(Eigen::Vector3d(particles[i*3],particles[i*3+1],particles[i*3+2]));
+	}
+
 	printf("CLOTH DRAW -------\n");
+	std::vector<std::vector<int> >& sq = mSoftWorld->sqs;
+	std::cout<<"sq sz = "<<sq.size()<<std::endl;
+	for(int i = 0; i < sq.size(); i++) {
+		glColor3f(0.35f, 0.80f, 0.35f);	
+		glBegin(GL_QUADS);
+		if(sq[i].size() != 4) {
+			std::cout<<"sq["<<i<<"] sz = "<<sq[i].size()<<std::endl;
+		}
+		for(int j = 0; j < 4; j++) {
+			if(sq[i][j] < 0 || sq[i][j] >= verts.size()) std::cout<<"sq[i][j] = "<<sq[i][j]<<std::endl;
+			glVertex3f(verts[sq[i][j]][0], verts[sq[i][j]][1], verts[sq[i][j]][2]);
+		}
+		glEnd();
+	}
+	/*
 	for(int i = 0; i < particles.size()/3; i++) {
 		auto p = mSoftWorld->mX.block<3,1>(3*i,0);
 		glColor3f(0.35f, 0.80f, 0.35f);
@@ -962,17 +926,13 @@ void drawWorld() {
 		glTranslated(p[0], p[1], p[2]);
 		glutSolidSphere(handRad, slice, 10);
 		glTranslated(-p[0], -p[1], -p[2]);
-	}
+	}*/
 
+
+	/* DRAW COLLISION RECT
 	for(auto const& x : current->jointMap) {
 		auto* joint = x.second;
 		std::vector< glm::mat4 >& vers = CurVersMap[x.first];
-		/*
-		std::cout << "JOINT " << joint->name << std::endl;
-		if(vers.size() > 0) {
-			std::cout << vers[0][3][0] << ", "<< vers[0][3][1] << ", " << vers[0][3][2] << std::endl;
-		}
-		*/
 		for(auto ver : vers) {
 			auto p = ver[3];
 			glColor3f(0.35f, 0.35f, 0.80f);
@@ -983,7 +943,7 @@ void drawWorld() {
 		if (vers.size() != 8) {
 			continue;
 		} else {
-			glColor3f(0.1f, 0.1f, 0.1f);
+			glColor3f(0.2f, 0.1f, 0.1f);
 			glBegin( GL_QUADS );
 			glVertex3f(vers[0][3][0], vers[0][3][1], vers[0][3][2]);
 			glVertex3f(vers[1][3][0], vers[1][3][1], vers[1][3][2]);
@@ -994,7 +954,7 @@ void drawWorld() {
 			glVertex3f(vers[6][3][0], vers[6][3][1], vers[6][3][2]);
 			glVertex3f(vers[7][3][0], vers[7][3][1], vers[7][3][2]);
 			glEnd();
-			glColor3f(0.1f, 0.1f, 0.1f);
+			glColor3f(0.1f, 0.2f, 0.1f);
 			glBegin( GL_QUADS );
 			glVertex3f(vers[0][3][0], vers[0][3][1], vers[0][3][2]);
 			glVertex3f(vers[3][3][0], vers[3][3][1], vers[3][3][2]);
@@ -1004,9 +964,21 @@ void drawWorld() {
 			glVertex3f(vers[7][3][0], vers[7][3][1], vers[7][3][2]);
 			glVertex3f(vers[6][3][0], vers[6][3][1], vers[6][3][2]);
 			glVertex3f(vers[2][3][0], vers[2][3][1], vers[2][3][2]);
+			glEnd();
+			glColor3f(0.1f, 0.1f, 0.2f);
+			glBegin( GL_QUADS );
+			glVertex3f(vers[0][3][0], vers[0][3][1], vers[0][3][2]);
+			glVertex3f(vers[4][3][0], vers[4][3][1], vers[4][3][2]);
+			glVertex3f(vers[7][3][0], vers[7][3][1], vers[7][3][2]);
+			glVertex3f(vers[1][3][0], vers[1][3][1], vers[1][3][2]);
+			glVertex3f(vers[2][3][0], vers[2][3][1], vers[2][3][2]);
+			glVertex3f(vers[6][3][0], vers[6][3][1], vers[6][3][2]);
+			glVertex3f(vers[5][3][0], vers[5][3][1], vers[5][3][2]);
+			glVertex3f(vers[3][3][0], vers[3][3][1], vers[3][3][2]);
 			glEnd();
 		}
 	}
+	*/
 	const auto& constraints = mSoftWorld->mConstraints;
 	double stiff = constraints[0]->GetStiffness();
 	std::cout << "stiff: " << stiff << std::endl;
@@ -1032,6 +1004,8 @@ void drawWorld() {
 
 	PreVersMap = CurVersMap;
 	glPopMatrix();
+
+	drawBVH();
 
 	glPopMatrix();
 
@@ -1064,7 +1038,7 @@ int main(int argc, char **argv) {
 		FEM::OptimizationMethod::OPTIMIZATION_METHOD_NEWTON,
 		FEM::LinearSolveType::SOLVER_TYPE_LDLT,
 		world_timestep,										//time_step
-		100, 											//max_iteration	
+		10, 											//max_iteration	
 		0.99											//damping_coeff
 		);
 

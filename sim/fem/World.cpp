@@ -331,7 +331,7 @@ EvaluateConstraintsGradient(const Eigen::VectorXd& x,Eigen::VectorXd& g)
 {
 	g.resize(mNumVertices*3);
 	g.setZero();
-// #pragma omp parallel for 
+ #pragma omp parallel for 
 	for(int i =0;i<mConstraints.size();i++){
 		mConstraints[i]->EvaluateGradient(x);
 	}

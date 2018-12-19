@@ -54,4 +54,7 @@ Initialize(FEM::World* world)
 	for(auto& c: mConstraints) {
 		world->AddConstraint(c);
 	}
+	
+	world->sqs = mMesh->mSquares;
+	world->parts = mMesh->mpp;
 }

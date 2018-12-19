@@ -1,11 +1,11 @@
 #include "ClothMesh.h"
 
 ClothMesh::ClothMesh() {
-	n=12; m=12;
+	n=8; m=8;
 	double nSz = 60.0, mSz = 40.0;
 	double thick = 8.0;
 	GridMesh* m1 = new GridMesh(n,m,nSz,mSz,Eigen::Vector3d(8.89406-mSz/2,141.677-nSz,-88.409+thick),Eigen::Vector3d(0.0,1.0,0.0),Eigen::Vector3d(1.0,0.0,0.0));
-	GridMesh* m2 = new GridMesh(n,m,nSz,mSz,Eigen::Vector3d(8.89406-mSz/2,141.677,-88.409-thick),Eigen::Vector3d(0.0,-1.0,0.0),Eigen::Vector3d(1.0,0.0,0.0));
+	GridMesh* m2 = new GridMesh(n,m,nSz,mSz,Eigen::Vector3d(8.89406-mSz/2,141.677,-88.409-thick),Eigen::Vector3d(0.0,-1.0,-0.2),Eigen::Vector3d(1.0,0.0,0.0));
 	const std::vector<Eigen::Vector3d> &p1=m1->GetParticles(), &p2=m2->GetParticles();
 	const std::vector<Eigen::Vector2d> &s1=m1->GetSprings(), &s2=m2->GetSprings();
 	for(int i=0;i<p1.size();i++)
@@ -77,8 +77,10 @@ ClothMesh::ClothMesh() {
 	}
 	for(int i=1;i<=n-1;i++) {
 		std::vector<int> sq;
-		sq.push_back(i*m); sq.push_back((i-1)*m);
-		sq.push_back((2*n-i)*m); sq.push_back((2*n-1-i)*m);
+		sq.push_back(i*m);
+		sq.push_back((i-1)*m);
+		sq.push_back((2*n-1-i)*m);
+		sq.push_back((2*n-i)*m);
 		mSquares.push_back(sq);
 		for(int j=0;j<sq.size();j++)
 			sq[j]+=m-1;
@@ -97,6 +99,7 @@ ClothMesh::ClothMesh() {
 			}
 		}
 	}
+	mpp = mParticles;
 	/*
 	for(int i=0;i<mSprings.size();i++) {
 		if(mSprings[i][0] >= 2*n*m || mSprings[i][1]>= 2*n*m) {

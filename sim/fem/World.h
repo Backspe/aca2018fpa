@@ -131,6 +131,9 @@ public:
 
 	/****************************************************************/
 	bool								mPrefactorization;
+
+	std::vector<std::vector<int> > sqs;
+	std::vector<Eigen::Vector3d> parts;
 };
 };
 
