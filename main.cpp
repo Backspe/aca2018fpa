@@ -58,6 +58,9 @@ const double tibiaRad = 4.0;
 const double footRad = 1.5;
 const double toesRad = 0.75;
 
+const double eps = 0.1;
+double world_timestep = 1.0/150.0;
+
 // 각도 관련 변수
 
 Camera camera = Camera();
@@ -77,7 +80,6 @@ Joint* selectedJoint;
 FEM::World*	mSoftWorld;
 Cloth* mCloth;
 
-double world_timestep = 1.0/300.0;
 
 // >< 눈
 void eye(double rad) {
@@ -376,7 +378,7 @@ std::vector< glm::mat4 > getJointRect(Joint* current) {
 		ret = getCube(neckRad*2, neckRad + headRad, neckRad*2, 0, 0, 0);
 	}
 	if(current->name.compare("thorax") == 0) {
-		ret = getCube(bodyWidth, jointMap.find("lclavicle")->second->offset[1] - thoraxRad, bodyThick, 0, thoraxRad, 0);
+		ret = getCube(bodyWidth, jointMap.find("head")->second->offset[1], bodyThick, 0, 0, 0);
 	}
 
 
@@ -750,22 +752,6 @@ void drawWorld() {
 
 	glPushMatrix();
 
-	printf("CLOTH DRAW -------\n");
-	const auto& particles = mSoftWorld->mX;
-	for(int i = 0; i < particles.size()/3; i++) {
-		auto p = particles.block<3,1>(3*i,0);
-		glColor3f(0.35f, 0.80f, 0.35f);
-		if(i > 90 && i < 110) {
-			glColor3f(0.89f, 0.80f, 0.35f);
-		}
-		glBegin(GL_POINTS);
-		glPointSize(100.0f);
-		glVertex3d(p[0], p[1], p[2]);
-		glEnd();
-		glTranslated(p[0], p[1], p[2]);
-		glutSolidSphere(handRad, slice, 10);
-		glTranslated(-p[0], -p[1], -p[2]);
-	}
 
 	printf("JOINT CHECK -------\n");
 	
@@ -802,8 +788,9 @@ void drawWorld() {
 		}
 	};
 	int ridx[6][3] = {
-		{0, 1, 2}, {4, 5, 6}, {3, 5, 4}, {3, 2, 6}, {2, 1, 7}, {0, 4, 7}
+		{0, 1, 2}, {3, 5, 4}, {3, 2, 6}, {2, 1, 7}, {0, 4, 7}, {4, 5, 6}
 	};
+	const auto& particles = mSoftWorld->mX;
 
 	std::map< std::string, std::vector< glm::mat4 >  > CurVersMap;
 	for(auto const& x : current->jointMap) {
@@ -818,11 +805,25 @@ void drawWorld() {
 	}
 
 	int maxCount = int(bvh->frameTime/world_timestep);
+	std::cout<< "maxcount: " << maxCount << std::endl;
 	
 	for(int timecount = 1; timecount <= int(bvh->frameTime/world_timestep); timecount++){
+
+		std::vector<int> attachIdx;
+		std::vector<Eigen::Vector3d> attachTarget;
 		for(auto const& x : current->jointMap) {
 			auto* joint = x.second;
+			string name_ = x.first;
 			std::vector< glm::mat4 >& vers1 = PreVersMap[x.first], &vers2 = CurVersMap[x.first];
+			
+			if(name_ == "thorax") {
+				attachIdx.push_back(132); attachIdx.push_back(143); attachIdx.push_back(144); attachIdx.push_back(155);
+				attachTarget.push_back(Eigen::Vector3d(vers2[7][3][0],vers2[7][3][1],vers2[7][3][2]));
+				attachTarget.push_back(Eigen::Vector3d(vers2[4][3][0],vers2[4][3][1],vers2[4][3][2]));
+				attachTarget.push_back(Eigen::Vector3d(vers2[6][3][0],vers2[6][3][1],vers2[6][3][2]));
+				attachTarget.push_back(Eigen::Vector3d(vers2[5][3][0],vers2[5][3][1],vers2[5][3][2]));
+			}
+			
 			if(vers1.size()!=vers2.size() || vers1.empty() || vers2.empty()) continue;
 			std::vector< glm::mat4 > vers;
 			vers.resize(8);
@@ -831,11 +832,13 @@ void drawWorld() {
 					vers[i][3][j] = (vers1[i][3][j] * (maxCount - timecount) / maxCount + vers2[i][3][j] * timecount / maxCount);
 				}
 			}
+			
 			for(int i = 0; i < particles.size()/3; i++) {
+				if(i==132 || i==143 || i==144 || i==155) continue;
 				bool in = true;
 				double dis = 1e9;
 				p pn;
-				auto pb = particles.block<3,1>(3*i, 0);
+				auto pb = mSoftWorld->mX.block<3,1>(3*i, 0);
 				double x = pb[0], y = pb[1], z = pb[2];
 				for(int j = 0; j < 6; j++) {
 					p A(vers[ridx[j][0]][3][0], vers[ridx[j][0]][3][1], vers[ridx[j][0]][3][2]),
@@ -846,10 +849,11 @@ void drawWorld() {
 					p N = (C - B) ^ (A - B);
 					a = N.x; b = N.y; c = N.z;
 					d = -A.x*a - A.y*b - A.z*c;
-					if (a*x + b*y + c*z + d >= 0.0) {
+					if (a*x + b*y + c*z + d > 0.0) {
 						in = false;
 						break;
 					}
+					
 					double w = abs(a*x + b*y + c*z + d) / sqrt(a*a + b*b + c*c);
 					if (w < dis) {
 						dis = w;
@@ -857,24 +861,112 @@ void drawWorld() {
 					}
 				}
 				if (in) {
-					pn.normalize();
-					std::cout << "collision : " << i << "move to " << pn.x << ", " << pn.y << ", " << pn.z << " with dist " << dis << "\n";
+					/*
+					double cx = 0.0, cy = 0.0, cz = 0.0;
+					for(int i = 0; i < 8; i++) {
+						cx += vers[i][3][0];
+						cy += vers[i][3][1];
+						cz += vers[i][3][2];
+					}
+					cx /= 8; cy /= 8; cz /= 8;
+					p nn=p(x, y, z) - p(cx, cy, cz);
+					nn.normalize();
+					double mxt = 1e9;
+					for(int i = 0; i < 6; i++) {
+						p A(vers[ridx[i][0]][3][0], vers[ridx[i][0]][3][1], vers[ridx[i][0]][3][2]),
+						  B(vers[ridx[i][1]][3][0], vers[ridx[i][1]][3][1], vers[ridx[i][1]][3][2]),
+						  C(vers[ridx[i][2]][3][0], vers[ridx[i][2]][3][1], vers[ridx[i][2]][3][2]);
+						double a, b, c, d;
+						p N = (C - B) ^ (A - B);
+						a = N.x; b = N.y; c = N.z;
+						d = -A.x*a - A.y*b - A.z*c;
+						double tw = -(a*x+b*y+c*z+d)/(a*nn.x+b*nn.y+c*nn.z);
+						if(tw < 0) continue;
+						if(tw < mxt) mxt = tw;
+					}
+					if (mxt < 1e9) {
+						std::cout << "collision with " << name_ << ": " << i << " move to " << nn.x << ", " << nn.y << ", " << nn.z << " with dist " << mxt << "\n";
+						mSoftWorld->mX[3*i] += mxt*nn.x;
+						mSoftWorld->mX[3*i+1] += mxt*nn.y;
+						mSoftWorld->mX[3*i+2] += mxt*nn.z;
+						
+						double tx = mSoftWorld->mX[3*i], ty = mSoftWorld->mX[3*i+1], tz = mSoftWorld->mX[3*i+2];
+					//	mSoftWorld->mExternalForces[3*i] += mxt*pn.x;
+					//	mSoftWorld->mExternalForces[3*i+1] += mxt*pn.y;
+					//	mSoftWorld->mExternalForces[3*i+2] += mxt*pn.z;
+						attachIdx.push_back(i);
+						attachTarget.push_back(Eigen::Vector3d(tx, ty, tz));
+					}
+					*/
 					
-					mSoftWorld->mX[3*i] += dis*pn.x * 2.0;
-					mSoftWorld->mX[3*i+1] += dis*pn.y * 2.0;
-					mSoftWorld->mX[3*i+2] += dis*pn.z * 2.0;
-					mSoftWorld->mExternalForces[3*i] += dis*pn.x * 20000.0;
-					mSoftWorld->mExternalForces[3*i+1] += dis*pn.y * 20000.0;
-					mSoftWorld->mExternalForces[3*i+2] += dis*pn.z * 20000.0;
+					pn.normalize();
+					double vx = mSoftWorld->mV[3*i], vy = mSoftWorld->mV[3*i+1], vz = mSoftWorld->mV[3*i+2];
+					p v(vx,vy,vz);
+					p nv = v-pn*(pn*v)*(1.0+eps);
+					std::cout << "collision with " << name_ << " - " << i << " : move to " << pn.x << ", " << pn.y << ", " << pn.z << " with dist " << dis << "\n";
+					std::cout << "v : " << v.x << ", " << v.y << ", " << v.z << "\n";
+					std::cout << "nv : " << nv.x << ", " << nv.y << ", " << nv.z << "\n";
+
+//					mSoftWorld->mV[3*i] = nv.x;
+//					mSoftWorld->mV[3*i+1] = nv.y;
+//					mSoftWorld->mV[3*i+2] = nv.z;
+					mSoftWorld->mX[3*i] += dis*pn.x * 1.0;
+					mSoftWorld->mX[3*i+1] += dis*pn.y * 1.0;
+					mSoftWorld->mX[3*i+2] += dis*pn.z * 1.0;
+
+					double tx = mSoftWorld->mX[3*i], ty = mSoftWorld->mX[3*i+1], tz = mSoftWorld->mX[3*i+2];
+					attachIdx.push_back(i);
+					attachTarget.push_back(Eigen::Vector3d(tx, ty, tz));
+//					mSoftWorld->AddConstraint(new FEM::AttachmentConstraint(500000,i,Eigen::Vector3d(tx, ty, tz)));
+
+//					mSoftWorld->mExternalForces[3*i] = 0.0;
+//					mSoftWorld->mExternalForces[3*i+1] = 0.0;
+//					mSoftWorld->mExternalForces[3*i+2] = 0.0;
+//					mSoftWorld->mExternalForces[3*i] += dis*pn.x * 200.0;
+//					mSoftWorld->mExternalForces[3*i+1] += dis*pn.y * 200.0;
+//					mSoftWorld->mExternalForces[3*i+2] += dis*pn.z * 200.0;
+					
 				}
 			}
 		}
+		mSoftWorld->mConstraintDofs = 0;
+		for(int i=0;i<attachIdx.size();i++) {
+			FEM::AttachmentConstraint* ac = new FEM::AttachmentConstraint(500000, attachIdx[i], attachTarget[i]);
+			mSoftWorld->mConstraints.push_back(ac);
+		}
+		for(auto c : mSoftWorld->mConstraints) {
+			mSoftWorld->mConstraintDofs += c->GetDof();
+		}
+		mSoftWorld->PreComputation();
 		mSoftWorld->TimeStepping();
+		for(int i=0;i<attachIdx.size();i++)
+			mSoftWorld->mConstraints.pop_back();
+		mSoftWorld->mConstraintDofs = 0;
+		for(auto c : mSoftWorld->mConstraints) {
+			mSoftWorld->mConstraintDofs += c->GetDof();
+		}
+		mSoftWorld->PreComputation();
+	}
+
+	printf("CLOTH DRAW -------\n");
+	for(int i = 0; i < particles.size()/3; i++) {
+		auto p = mSoftWorld->mX.block<3,1>(3*i,0);
+		glColor3f(0.35f, 0.80f, 0.35f);
+		if(i > 132 && i < 156) {
+			glColor3f(0.89f, 0.80f, 0.35f);
+		}
+		glBegin(GL_POINTS);
+		glPointSize(100.0f);
+		glVertex3d(p[0], p[1], p[2]);
+		glEnd();
+		glTranslated(p[0], p[1], p[2]);
+		glutSolidSphere(handRad, slice, 10);
+		glTranslated(-p[0], -p[1], -p[2]);
 	}
 
 	for(auto const& x : current->jointMap) {
 		auto* joint = x.second;
-		std::vector< glm::mat4 > vers = getJointRect(joint);
+		std::vector< glm::mat4 >& vers = CurVersMap[x.first];
 		/*
 		std::cout << "JOINT " << joint->name << std::endl;
 		if(vers.size() > 0) {
@@ -889,7 +981,6 @@ void drawWorld() {
 			glTranslated(-p[0], -p[1], -p[2]);
 		}
 		if (vers.size() != 8) {
-			std::cout << "vers size == " << vers.size() << std::endl;
 			continue;
 		} else {
 			glColor3f(0.1f, 0.1f, 0.1f);

@@ -5,7 +5,7 @@ using namespace FEM;
 
 Cloth::
 Cloth()
-:mMesh(),mStretchingStiffness(1E4),mBendingStiffness(2000.0)
+:mMesh(),mStretchingStiffness(1E4),mBendingStiffness(20.0)
 {
 
 }
@@ -26,21 +26,14 @@ Initialize(FEM::World* world)
 	int idx = 0;
 	for(const auto& spr : springs) 
 	{
-		if(idx < springs.size() - 6*(mMesh->n-1)) {
-			int i0,i1; 
-			Eigen::Vector3d p0,p1;
-			i0 = spr[0];
-			i1 = spr[1];
-			p0 = particles[i0];
-			p1 = particles[i1];
-			double l0 = (p0-p1).norm();
-			mConstraints.push_back(new SpringConstraint(mStretchingStiffness,i0,i1,l0));
-		} else {
-			double l0;
-			if(idx < springs.size() - 4*(mMesh->n-1)) l0 = 100/9.0;
-			else l0 = sqrt(2.0)*100/9.0;
-			mConstraints.push_back(new SpringConstraint(mStretchingStiffness,spr[0],spr[1],l0));
-		}
+		int i0,i1; 
+		Eigen::Vector3d p0,p1;
+		i0 = spr[0];
+		i1 = spr[1];
+		p0 = particles[i0];
+		p1 = particles[i1];
+		double l0 = (p0-p1).norm();
+		mConstraints.push_back(new SpringConstraint(mStretchingStiffness,i0,i1,l0));
 		idx +=1;
 	}
 
