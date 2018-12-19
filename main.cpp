@@ -378,10 +378,54 @@ std::vector< glm::mat4 > getJointRect(Joint* current) {
 	if(current->name.compare("thorax") == 0) {
 		ret = getCube(bodyWidth, jointMap.find("lclavicle")->second->offset[1] - thoraxRad, bodyThick, 0, thoraxRad, 0);
 	}
+
+
+	glm::mat4 defaultmat = glm::mat4(1.0f);
 	glm::mat4 fkmat = fk(bvh, current, frameCur);
-	for(int i = 0; i < ret.size(); i++) {
-		ret[i] = fkmat * ret[i];
-		ret[i] = fsm.offset * ret[i];
+
+	for(int j = 0; j < ret.size(); j++) {
+		for(int i = current->channelCount - 1; i >= 0; i--) {
+			switch(current->channelOrder[i]) {
+				case 0:
+					ret[j] = glm::rotate(defaultmat, 
+							glm::radians(frameCur[current->channelNum + i]),
+							glm::vec3(1.0f, 0.0f, 0.0f)
+							) * ret[j];
+					break;
+				case 1:
+					ret[j] = glm::rotate(defaultmat, 
+							glm::radians(frameCur[current->channelNum + i]),
+							glm::vec3(0.0f, 1.0f, 0.0f)
+							) * ret[j];
+					break;
+				case 2:
+					ret[j] = glm::rotate(defaultmat, 
+							glm::radians(frameCur[current->channelNum + i]),
+							glm::vec3(0.0f, 0.0f, 1.0f)
+							) * ret[j];
+					break;
+				case 3:
+					ret[j] = glm::translate(defaultmat, 
+							glm::vec3(frameCur[current->channelNum + i], 0.0f, 0.0f)
+							) * ret[j];
+					break;
+				case 4:
+					ret[j] = glm::translate(defaultmat, 
+							glm::vec3(0.0f, frameCur[current->channelNum + i], 0.0f)
+							) * ret[j];
+					break;
+				case 5:
+					ret[j] = glm::translate(defaultmat, 
+							glm::vec3(0.0f, 0.0f, frameCur[current->channelNum + i])
+							) * ret[j];
+					break;
+				default:
+					printf("error!\n");
+					exit(1);
+			}
+		}
+		ret[j] = fkmat * ret[j];
+		ret[j] = fsm.offset * ret[j];
 	}
 	return ret;
 }
