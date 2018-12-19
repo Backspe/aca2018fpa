@@ -6,3 +6,18 @@ Constraint(const double& stiffness)
 {
 	
 }
+
+void
+Constraint::
+SetStiffness(double stiffness)
+{
+	mStiffness = stiffness;
+	return;
+}
+
+double
+Constraint::
+GetStiffness()
+{
+	return mStiffness;
+}

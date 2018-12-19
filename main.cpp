@@ -1007,6 +1007,26 @@ void drawWorld() {
 			glEnd();
 		}
 	}
+	const auto& constraints = mSoftWorld->mConstraints;
+	double stiff = constraints[0]->GetStiffness();
+	std::cout << "stiff: " << stiff << std::endl;
+	if(Camera::command2 == 'z') {
+		Camera::command2 = '\0';
+		stiff = stiff * 10;
+		if(stiff > 1E8) stiff = 1E8;
+		for(auto s : constraints) {
+			s->SetStiffness(stiff);
+		}
+	}
+	else if(Camera::command2 == 'c') {
+		Camera::command2 = '\0';
+		stiff = stiff / 10;
+		if(stiff < 1E-1) stiff = 1E-1;
+		for(auto s : constraints) {
+			s->SetStiffness(stiff);
+		}
+	}
+	
 
 	PreVersMap = CurVersMap;
 	glPopMatrix();
