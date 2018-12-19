@@ -183,6 +183,8 @@ void Camera::keyboardHandler(unsigned char key, int x, int y) {
 	case 'x':
 	case 'z':
 	case 'c':
+	case 'b':
+	case 'v':
 		command2 = key;
 		break;
 	case 'i':

@@ -28,6 +28,8 @@ using namespace glm;
 float modelscale = 1.0f;
 int slice = 20;
 
+bool showCollisionBox = false;
+
 
 // 새 모델 크기 관련 변수
 
@@ -126,6 +128,7 @@ std::vector< glm::mat4 > getCube(float width, float height, float thick, float o
 	thick = thick / 2;
 	glm::mat4 mat = glm::mat4(1.0f);
 	std::vector< glm::mat4 > ret;
+	mat = glm::translate(mat, glm::vec3(offsetx, offsety, offsetz));
 	ret.push_back(glm::translate(mat, glm::vec3( width, 0.0f, thick)));
 	ret.push_back(glm::translate(mat, glm::vec3(-width, 0.0f, thick)));
 	ret.push_back(glm::translate(mat, glm::vec3(-width, 0.0f,-thick)));
@@ -134,7 +137,6 @@ std::vector< glm::mat4 > getCube(float width, float height, float thick, float o
 	ret.push_back(glm::translate(mat, glm::vec3( width, height,-thick)));
 	ret.push_back(glm::translate(mat, glm::vec3(-width, height,-thick)));
 	ret.push_back(glm::translate(mat, glm::vec3(-width, height, thick)));
-	mat = glm::translate(mat, glm::vec3(offsetx, offsety, offsetz));
 	return ret;
 }
 
@@ -343,13 +345,14 @@ void drawBody() {
 }
 
 std::vector< glm::mat4 > getJointRect(Joint* current) {
+	double boxScale = 2.0;
 	std::vector< glm::mat4 > ret;
 	if(current->name.compare("lfemur") == 0 || current->name.compare("rfemur") == 0) {
-		ret = getCube(-legThick, jointMap.find("ltibia")->second->offset[1] + femurRad + tibiaRad, legThick, 0, -femurRad, 0);
+		ret = getCube(-legThick * boxScale, jointMap.find("ltibia")->second->offset[1] + femurRad*0.5 + tibiaRad*0.5, legThick * boxScale, 0, -femurRad*0.5, 0);
 
 	}
 	if(current->name.compare("ltibia") == 0 || current->name.compare("rtibia") == 0) {
-		ret = getCube(-legThick, jointMap.find("lfoot")->second->offset[1] + tibiaRad + footRad, legThick, 0, -tibiaRad, 0);
+		ret = getCube(-legThick * boxScale, jointMap.find("lfoot")->second->offset[1] + tibiaRad + footRad, legThick * boxScale, 0, -tibiaRad, 0);
 	}
 	if(current->name.compare("lfoot") == 0 || current->name.compare("rfoot") == 0) {
 		glm::mat4 matRot = glm::rotate(glm::mat4(1.0), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
@@ -360,18 +363,18 @@ std::vector< glm::mat4 > getJointRect(Joint* current) {
 	}
 	if(current->name.compare("ltoes") == 0 || current->name.compare("rtoes") == 0) {
 		glm::mat4 matRot = glm::rotate(glm::mat4(1.0), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-		ret = getCube(footWidth, toesLength - toesRad, footThick, 0, toesRad, 0);
+		ret = getCube(footWidth, toesLength - toesRad, footThick * boxScale, 0, toesRad, 0);
 		for(int i = 0; i < ret.size(); i++) {
 			ret[i] = matRot * ret[i];
 		}
 	}
 
 	if(current->name.compare("lhumerus") == 0 || current->name.compare("rhumerus") == 0) {
-		ret = getCube(-armThick, jointMap.find("lradius")->second->offset[1] + humerusRad + radiusRad, armThick, 0, -humerusRad, 0);
+		ret = getCube(-armThick * boxScale, jointMap.find("lradius")->second->offset[1] + humerusRad + radiusRad, armThick * boxScale, 0, -humerusRad, 0);
 
 	}
 	if(current->name.compare("lradius") == 0 || current->name.compare("rradius") == 0) {
-		ret = getCube(-armThick, jointMap.find("lhand")->second->offset[1] + radiusRad + handRad, armThick, 0, -radiusRad, 0);
+		ret = getCube(-armThick * boxScale, jointMap.find("lhand")->second->offset[1] + radiusRad + handRad, armThick * boxScale, 0, -radiusRad, 0);
 	}
 	if(current->name.compare("lhand") == 0 || current->name.compare("rhand") == 0) {
 		ret = getCube(-handThick, -handLength + handRad, handWidth, 0, -handRad, 0);
@@ -380,7 +383,7 @@ std::vector< glm::mat4 > getJointRect(Joint* current) {
 		ret = getCube(neckRad*2, neckRad + headRad, neckRad*2, 0, 0, 0);
 	}
 	if(current->name.compare("thorax") == 0) {
-		ret = getCube(bodyWidth2, jointMap.find("head")->second->offset[1]+jointMap["thorax"]->offset[1], bodyThick2, 0, -jointMap["thorax"]->offset[1], 0);
+		ret = getCube(bodyWidth2, jointMap.find("head")->second->offset[1]+2*jointMap.find("thorax")->second->offset[1]+10, bodyThick2, 0, -2*jointMap.find("thorax")->second->offset[1], 0);
 	}
 
 
@@ -747,7 +750,7 @@ void drawWorld() {
 
 	int maxCount = int(bvh->frameTime/world_timestep);
 	std::cout<< "maxcount: " << maxCount << std::endl;
-	int nn = 8;
+	int nn = 12;
 	int mm = 8;
 	
 	for(int timecount = 1; timecount <= int(bvh->frameTime/world_timestep); timecount++){
@@ -891,100 +894,13 @@ void drawWorld() {
 		mSoftWorld->PreComputation();
 	}
 
-	std::vector<Eigen::Vector3d> verts;
 
-	for(int i = 0; i < particles.size() / 3; i++) {
-		verts.push_back(Eigen::Vector3d(particles[i*3],particles[i*3+1],particles[i*3+2]));
-	}
-
-	printf("CLOTH DRAW -------\n");
-	std::vector<std::vector<int> >& sq = mSoftWorld->sqs;
-	std::cout<<"sq sz = "<<sq.size()<<std::endl;
-	for(int i = 0; i < sq.size(); i++) {
-		glColor3f(0.35f, 0.80f, 0.35f);	
-		glBegin(GL_QUADS);
-		if(sq[i].size() != 4) {
-			std::cout<<"sq["<<i<<"] sz = "<<sq[i].size()<<std::endl;
-		}
-		for(int j = 0; j < 4; j++) {
-			if(sq[i][j] < 0 || sq[i][j] >= verts.size()) std::cout<<"sq[i][j] = "<<sq[i][j]<<std::endl;
-			glVertex3f(verts[sq[i][j]][0], verts[sq[i][j]][1], verts[sq[i][j]][2]);
-		}
-		glEnd();
-	}
-	/*
-	for(int i = 0; i < particles.size()/3; i++) {
-		auto p = mSoftWorld->mX.block<3,1>(3*i,0);
-		glColor3f(0.35f, 0.80f, 0.35f);
-		if(i > 132 && i < 156) {
-			glColor3f(0.89f, 0.80f, 0.35f);
-		}
-		glBegin(GL_POINTS);
-		glPointSize(100.0f);
-		glVertex3d(p[0], p[1], p[2]);
-		glEnd();
-		glTranslated(p[0], p[1], p[2]);
-		glutSolidSphere(handRad, slice, 10);
-		glTranslated(-p[0], -p[1], -p[2]);
-	}*/
-
-
-	/* DRAW COLLISION RECT
-	for(auto const& x : current->jointMap) {
-		auto* joint = x.second;
-		std::vector< glm::mat4 >& vers = CurVersMap[x.first];
-		for(auto ver : vers) {
-			auto p = ver[3];
-			glColor3f(0.35f, 0.35f, 0.80f);
-			glTranslated(p[0], p[1], p[2]);
-			glutSolidSphere(handRad, slice, 10);
-			glTranslated(-p[0], -p[1], -p[2]);
-		}
-		if (vers.size() != 8) {
-			continue;
-		} else {
-			glColor3f(0.2f, 0.1f, 0.1f);
-			glBegin( GL_QUADS );
-			glVertex3f(vers[0][3][0], vers[0][3][1], vers[0][3][2]);
-			glVertex3f(vers[1][3][0], vers[1][3][1], vers[1][3][2]);
-			glVertex3f(vers[2][3][0], vers[2][3][1], vers[2][3][2]);
-			glVertex3f(vers[3][3][0], vers[3][3][1], vers[3][3][2]);
-			glVertex3f(vers[4][3][0], vers[4][3][1], vers[4][3][2]);
-			glVertex3f(vers[5][3][0], vers[5][3][1], vers[5][3][2]);
-			glVertex3f(vers[6][3][0], vers[6][3][1], vers[6][3][2]);
-			glVertex3f(vers[7][3][0], vers[7][3][1], vers[7][3][2]);
-			glEnd();
-			glColor3f(0.1f, 0.2f, 0.1f);
-			glBegin( GL_QUADS );
-			glVertex3f(vers[0][3][0], vers[0][3][1], vers[0][3][2]);
-			glVertex3f(vers[3][3][0], vers[3][3][1], vers[3][3][2]);
-			glVertex3f(vers[5][3][0], vers[5][3][1], vers[5][3][2]);
-			glVertex3f(vers[4][3][0], vers[4][3][1], vers[4][3][2]);
-			glVertex3f(vers[1][3][0], vers[1][3][1], vers[1][3][2]);
-			glVertex3f(vers[7][3][0], vers[7][3][1], vers[7][3][2]);
-			glVertex3f(vers[6][3][0], vers[6][3][1], vers[6][3][2]);
-			glVertex3f(vers[2][3][0], vers[2][3][1], vers[2][3][2]);
-			glEnd();
-			glColor3f(0.1f, 0.1f, 0.2f);
-			glBegin( GL_QUADS );
-			glVertex3f(vers[0][3][0], vers[0][3][1], vers[0][3][2]);
-			glVertex3f(vers[4][3][0], vers[4][3][1], vers[4][3][2]);
-			glVertex3f(vers[7][3][0], vers[7][3][1], vers[7][3][2]);
-			glVertex3f(vers[1][3][0], vers[1][3][1], vers[1][3][2]);
-			glVertex3f(vers[2][3][0], vers[2][3][1], vers[2][3][2]);
-			glVertex3f(vers[6][3][0], vers[6][3][1], vers[6][3][2]);
-			glVertex3f(vers[5][3][0], vers[5][3][1], vers[5][3][2]);
-			glVertex3f(vers[3][3][0], vers[3][3][1], vers[3][3][2]);
-			glEnd();
-		}
-	}
-	*/
 	const auto& constraints = mSoftWorld->mConstraints;
 	double stiff = constraints[0]->GetStiffness();
 	std::cout << "stiff: " << stiff << std::endl;
 	if(Camera::command2 == 'z') {
 		Camera::command2 = '\0';
-		stiff = stiff * 10;
+		stiff = stiff * 5;
 		if(stiff > 1E8) stiff = 1E8;
 		for(auto s : constraints) {
 			s->SetStiffness(stiff);
@@ -993,19 +909,116 @@ void drawWorld() {
 	}
 	else if(Camera::command2 == 'c') {
 		Camera::command2 = '\0';
-		stiff = stiff / 10;
-		if(stiff < 1E-1) stiff = 1E-1;
+		stiff = stiff / 5;
+		if(stiff < 1E-2) stiff = 1E-2;
 		for(auto s : constraints) {
 			s->SetStiffness(stiff);
 		}
 		mSoftWorld->PreComputation();
 	}
+	else if(Camera::command2 == 'b') {
+		showCollisionBox = false;
+	}
+	else if(Camera::command2 == 'v') {
+		showCollisionBox = true;
+	}
+
+
+	if(!showCollisionBox) {
+		printf("CLOTH DRAW -------\n");
+
+		std::vector<Eigen::Vector3d> verts;
+
+		for(int i = 0; i < particles.size() / 3; i++) {
+			verts.push_back(Eigen::Vector3d(particles[i*3],particles[i*3+1],particles[i*3+2]));
+		}
+		std::vector<std::vector<int> >& sq = mSoftWorld->sqs;
+		std::cout<<"sq sz = "<<sq.size()<<std::endl;
+		for(int i = 0; i < sq.size(); i++) {
+			glColor3f(0.35f, 0.80f, 0.35f);	
+			glBegin(GL_QUADS);
+			if(sq[i].size() != 4) {
+				std::cout<<"sq["<<i<<"] sz = "<<sq[i].size()<<std::endl;
+			}
+			for(int j = 0; j < 4; j++) {
+				if(sq[i][j] < 0 || sq[i][j] >= verts.size()) std::cout<<"sq[i][j] = "<<sq[i][j]<<std::endl;
+				glVertex3f(verts[sq[i][j]][0], verts[sq[i][j]][1], verts[sq[i][j]][2]);
+			}
+			glEnd();
+		}
+		drawBVH();
+	} else {
+		for(int i = 0; i < particles.size()/3; i++) {
+			glPushMatrix();
+			auto p = mSoftWorld->mX.block<3,1>(3*i,0);
+			glColor3f(0.35f, 0.80f, 0.35f);
+			if(i > 132 && i < 156) {
+				glColor3f(0.89f, 0.80f, 0.35f);
+			}
+			glBegin(GL_POINTS);
+			glPointSize(100.0f);
+			glVertex3d(p[0], p[1], p[2]);
+			glEnd();
+			glTranslated(p[0], p[1], p[2]);
+			glutSolidSphere(handRad, slice, 10);
+			glTranslated(-p[0], -p[1], -p[2]);
+			glPopMatrix();
+		}
+		for(auto const& x : current->jointMap) {
+			glPushMatrix();
+			auto* joint = x.second;
+			std::vector< glm::mat4 >& vers = CurVersMap[x.first];
+			for(auto ver : vers) {
+				auto p = ver[3];
+				glColor3f(0.35f, 0.35f, 0.80f);
+				glTranslated(p[0], p[1], p[2]);
+				glutSolidSphere(handRad, slice, 10);
+				glTranslated(-p[0], -p[1], -p[2]);
+			}
+			glPopMatrix();
+			if (vers.size() != 8) {
+				continue;
+			} else {
+				glColor3f(0.2f, 0.1f, 0.1f);
+				glBegin( GL_QUADS );
+				glVertex3f(vers[0][3][0], vers[0][3][1], vers[0][3][2]);
+				glVertex3f(vers[1][3][0], vers[1][3][1], vers[1][3][2]);
+				glVertex3f(vers[2][3][0], vers[2][3][1], vers[2][3][2]);
+				glVertex3f(vers[3][3][0], vers[3][3][1], vers[3][3][2]);
+				glVertex3f(vers[4][3][0], vers[4][3][1], vers[4][3][2]);
+				glVertex3f(vers[5][3][0], vers[5][3][1], vers[5][3][2]);
+				glVertex3f(vers[6][3][0], vers[6][3][1], vers[6][3][2]);
+				glVertex3f(vers[7][3][0], vers[7][3][1], vers[7][3][2]);
+				glEnd();
+				glColor3f(0.1f, 0.2f, 0.1f);
+				glBegin( GL_QUADS );
+				glVertex3f(vers[0][3][0], vers[0][3][1], vers[0][3][2]);
+				glVertex3f(vers[3][3][0], vers[3][3][1], vers[3][3][2]);
+				glVertex3f(vers[5][3][0], vers[5][3][1], vers[5][3][2]);
+				glVertex3f(vers[4][3][0], vers[4][3][1], vers[4][3][2]);
+				glVertex3f(vers[1][3][0], vers[1][3][1], vers[1][3][2]);
+				glVertex3f(vers[7][3][0], vers[7][3][1], vers[7][3][2]);
+				glVertex3f(vers[6][3][0], vers[6][3][1], vers[6][3][2]);
+				glVertex3f(vers[2][3][0], vers[2][3][1], vers[2][3][2]);
+				glEnd();
+				glColor3f(0.1f, 0.1f, 0.2f);
+				glBegin( GL_QUADS );
+				glVertex3f(vers[0][3][0], vers[0][3][1], vers[0][3][2]);
+				glVertex3f(vers[4][3][0], vers[4][3][1], vers[4][3][2]);
+				glVertex3f(vers[7][3][0], vers[7][3][1], vers[7][3][2]);
+				glVertex3f(vers[1][3][0], vers[1][3][1], vers[1][3][2]);
+				glVertex3f(vers[2][3][0], vers[2][3][1], vers[2][3][2]);
+				glVertex3f(vers[6][3][0], vers[6][3][1], vers[6][3][2]);
+				glVertex3f(vers[5][3][0], vers[5][3][1], vers[5][3][2]);
+				glVertex3f(vers[3][3][0], vers[3][3][1], vers[3][3][2]);
+				glEnd();
+			}
+		}
+	}
 	
 
 	PreVersMap = CurVersMap;
 	glPopMatrix();
-
-	drawBVH();
 
 	glPopMatrix();
 
