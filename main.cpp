@@ -1017,6 +1017,7 @@ void drawWorld() {
 		for(auto s : constraints) {
 			s->SetStiffness(stiff);
 		}
+		mSoftWorld->PreComputation();
 	}
 	else if(Camera::command2 == 'c') {
 		Camera::command2 = '\0';
@@ -1025,6 +1026,7 @@ void drawWorld() {
 		for(auto s : constraints) {
 			s->SetStiffness(stiff);
 		}
+		mSoftWorld->PreComputation();
 	}
 	
 
