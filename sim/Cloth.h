@@ -3,17 +3,18 @@
 #include "fem/World.h"
 #include "fem/Mesh/MeshHeader.h"
 #include "fem/Constraint/ConstraintHeader.h"
+#include "fem/Mesh/ClothMesh.h"
 class Cloth 
 {
 public:
 	Cloth();
 	void Initialize(FEM::World* world);
 	void SetMesh();
-	FEM::Mesh* GetMesh() {return mMesh;};
+	ClothMesh* GetMesh() {return mMesh;};
 	
 private:
 	std::vector<FEM::Constraint*>						mConstraints;
-	FEM::Mesh*											mMesh;
+	ClothMesh*											mMesh;
 
 	double 												mStretchingStiffness;
 	double 												mBendingStiffness;

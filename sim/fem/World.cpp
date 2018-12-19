@@ -108,6 +108,9 @@ TimeStepping(bool isIntegrated)
 	Eigen::VectorXd x_n1(mNumVertices*3);
 
 	ComputeExternalForces();
+
+	//x[i], y[i], z[i] => mExternalForces[i*3+1], [i*3+2], [i*3+3]
+
 	mQn = mX + mTimeStep*mV + (mTimeStep*mTimeStep)*(mInvMassMatrix*mExternalForces);
 
 	switch(mIntegrationMethod) {
@@ -126,7 +129,7 @@ TimeStepping(bool isIntegrated)
 	{	
 		mTime += mTimeStep;
 		mFrame++;
-	} 
+	}
 }
 void
 World::
