@@ -668,7 +668,6 @@ void drawWorld() {
 	frameCur = bvh->frames[0];
 	//if (drawIdx == frames.size()) drawIdx = 0;
 
-	/*
 	fsm.idle();
 	if(fsm.isInterpolate) {
 		if(fsm.frameIndex != prevfi)
@@ -679,7 +678,6 @@ void drawWorld() {
 	}
 	prevfi = fsm.frameIndex;
 	frameCur = fsm.getFrame();
-	*/
 
 	jointIndex = 0;
 
@@ -699,15 +697,15 @@ void drawWorld() {
 	glPushMatrix();
 
 	const auto& particles = mSoftWorld->mX;
-	for(int i = 0; i < 100; i++) {
+	for(int i = 0; i < particles.size()/3; i++) {
 		auto p = particles.block<3,1>(3*i,0);
-		glColor3f(0.35f, 0.35f, 0.80f);
+		glColor3f(0.35f, 0.80f, 0.35f);
 		glBegin(GL_POINTS);
 		glPointSize(100.0f);
 		glVertex3d(p[0], p[1], p[2]);
 		glEnd();
 		glTranslated(p[0], p[1], p[2]);
-		glutSolidSphere(thoraxRad, slice, 10);
+		glutSolidSphere(handRad, slice, 10);
 		glTranslated(-p[0], -p[1], -p[2]);
 	}
 
@@ -721,8 +719,9 @@ void drawWorld() {
 		}
 		for(auto ver : vers) {
 			auto p = ver[3];
+			glColor3f(0.35f, 0.35f, 0.80f);
 			glTranslated(p[0], p[1], p[2]);
-			glutSolidSphere(thoraxRad, slice, 10);
+			glutSolidSphere(handRad, slice, 10);
 			glTranslated(-p[0], -p[1], -p[2]);
 		}
 	}

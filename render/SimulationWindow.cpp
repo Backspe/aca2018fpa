@@ -73,7 +73,24 @@ Display()
 	glColor3f(0,0,0);
     GUI::DrawStringOnScreen(0.8,0.2,std::to_string(mSoftWorld->GetTime()),
     	true,Eigen::Vector3d(0.0,0.0,0.0));
-	
+
+   /*
+    	const auto& sq = mCloth->GetMesh()->GetSquares();
+	const auto& vert = mSoftWorld->mX;
+	printf("sz = %d\n",(int)vert.size());
+	glColor3f(0.0,1.0,0.0);
+	for(int i=0;i<sq.size();i++) {
+		glBegin(GL_QUADS);
+		//printf("idx (%d,%d,%d,%d)\n",sq[i][0],sq[i][1],sq[i][2],sq[i][3]);
+		for(int j=0;j<sq[i].size();j++) {
+			int idx=sq[i][j];
+			glVertex3f(vert.block<3,1>(3*idx+1,0)[0],vert.block<3,1>(3*idx+1,0)[1],vert.block<3,1>(3*idx+1,0)[2]);
+		//	printf("(%.3f,%.3f,%.3f)\n",vert.block<3,1>(3*idx+1,0)[0],vert.block<3,1>(3*idx+1,1)[1],vert.block<3,1>(3*idx+1,1)[2]);
+		}
+		glEnd();
+	}
+//*/
+    //*
 	const auto& particles = mSoftWorld->mX;
 	const auto& springs = mCloth->GetMesh()->GetSprings();
 
@@ -82,7 +99,7 @@ Display()
 		GUI::DrawPoint(particles.block<3,1>(3*i,0),3.0,Eigen::Vector3d(0,0,0));
 	}
 
-	GUI::DrawPoint(particles.block<3,1>(3*9,0),10.0,Eigen::Vector3d(1,0,0));
+//	GUI::DrawPoint(particles.block<3,1>(3*9,0),10.0,Eigen::Vector3d(1,0,0));
 
 	for(const auto& s : springs) 
 	{
@@ -92,6 +109,7 @@ Display()
 	}
 
 	if(mCapture) Screenshot();
+	//*/	
 
 	glEnable(GL_DEPTH_TEST);
 	glutSwapBuffers();
@@ -181,6 +199,7 @@ Timer(int value)
 	if(mPlay) {
 		// auto start_time = std::chrono::system_clock::now();
 		mSoftWorld->TimeStepping();
+//		mSoftWorld->mX[1] += 5.0;
 		// auto end_time = std::chrono::system_clock::now();
 		// std::chrono::duration<double> elapsed_seconds = end_time-start_time;
 		// std::cout << "time: " << elapsed_seconds.count() << "s" <<std::endl;
