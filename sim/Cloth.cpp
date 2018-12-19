@@ -5,7 +5,7 @@ using namespace FEM;
 
 Cloth::
 Cloth()
-:mMesh(),mStretchingStiffness(1E2),mBendingStiffness(20.0)
+:mMesh(),mStretchingStiffness(1E4),mBendingStiffness(2000.0)
 {
 
 }
@@ -15,7 +15,7 @@ Initialize(FEM::World* world)
 {
 	Eigen::Affine3d T=Eigen::Affine3d::Identity();
 	//mMesh = new GridMesh(10,10,10.0,10.0,Eigen::Vector3d(-1.0,1.0,0),T);
-	mMesh = new ClothMesh();	
+	mMesh = new ClothMesh();
 
 	const auto& particles = mMesh->GetParticles();
 	const auto& springs = mMesh->GetSprings();
@@ -26,7 +26,7 @@ Initialize(FEM::World* world)
 	int idx = 0;
 	for(const auto& spr : springs) 
 	{
-		if(idx < springs.size() - 54) {
+		if(idx < springs.size() - 6*(mMesh->n-1)) {
 			int i0,i1; 
 			Eigen::Vector3d p0,p1;
 			i0 = spr[0];
@@ -37,16 +37,16 @@ Initialize(FEM::World* world)
 			mConstraints.push_back(new SpringConstraint(mStretchingStiffness,i0,i1,l0));
 		} else {
 			double l0;
-			if(idx < springs.size() - 36) l0 = 10.0;
-			else l0 = sqrt(2.0)*10.0;
+			if(idx < springs.size() - 4*(mMesh->n-1)) l0 = 100/9.0;
+			else l0 = sqrt(2.0)*100/9.0;
 			mConstraints.push_back(new SpringConstraint(mStretchingStiffness,spr[0],spr[1],l0));
 		}
 		idx +=1;
 	}
 
 //	world->AddConstraint(new FEM::AttachmentConstraint(500000,1*10-1,particles[1*10-1]));
-	world->AddConstraint(new FEM::AttachmentConstraint(500000,0,particles[0]));
-	world->AddConstraint(new FEM::AttachmentConstraint(500000,9,particles[9]));
+//	world->AddConstraint(new FEM::AttachmentConstraint(500000,0,particles[0]));
+//	world->AddConstraint(new FEM::AttachmentConstraint(500000,9,particles[9]));
 	// world->AddConstraint(new FEM::AttachmentConstraint(500000,3*10-1,particles[3*10-1]));
 	// world->AddConstraint(new FEM::AttachmentConstraint(500000,5*10-1,particles[5*10-1]));
 	// world->AddConstraint(new FEM::AttachmentConstraint(500000,7*10-1,particles[7*10-1]));

@@ -8,19 +8,22 @@ GridMesh::
 GridMesh(const int& w_num, const int& h_num,
 		const double& w_length, const double& h_length,
 		const Eigen::Vector3d& origin,
-		const Eigen::Affine3d& T)
+		const Eigen::Vector3d& w_orientation,
+		const Eigen::Vector3d& h_orientation,
+		const Eigen::Affine3d& T
+		)
 	:Mesh()
 {
-	double w_grid = w_length / w_num;
-	double h_grid = h_length / h_num;
+	double w_grid = w_length / (w_num-1);
+	double h_grid = h_length / (h_num-1);
 
 	// Particles
 	for(int i=0; i<w_num; i++) {
 		for(int j=0; j<h_num; j++) {
 			Eigen::Vector3d vertex_position;
-			vertex_position[0] = origin[0]+w_grid*i;
-			vertex_position[1] = origin[1]+5.0;
-			vertex_position[2] = origin[2]+h_grid*j;
+			vertex_position[0] = origin[0]+w_grid*w_orientation[0]*i+h_grid*h_orientation[0]*j;
+			vertex_position[1] = origin[1]+w_grid*w_orientation[1]*i+h_grid*h_orientation[1]*j;
+			vertex_position[2] = origin[2]+w_grid*w_orientation[2]*i+h_grid*h_orientation[2]*j;
 			vertex_position= T*vertex_position;
             mParticles.push_back(vertex_position);
 		}

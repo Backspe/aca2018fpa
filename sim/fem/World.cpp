@@ -38,6 +38,8 @@ Initialize()
 		mConstraintDofs += c->GetDof();
 	}
 
+	std::cout<<mConstraintDofs<<std::endl;
+
 	mV.resize(3*mNumVertices);
 	mV.setZero();
 
@@ -107,11 +109,12 @@ TimeStepping(bool isIntegrated)
 
 	Eigen::VectorXd x_n1(mNumVertices*3);
 
+
 	ComputeExternalForces();
 
-	//x[i], y[i], z[i] => mExternalForces[i*3+1], [i*3+2], [i*3+3]
-
 	mQn = mX + mTimeStep*mV + (mTimeStep*mTimeStep)*(mInvMassMatrix*mExternalForces);
+
+	mExternalForces.setZero();
 
 	switch(mIntegrationMethod) {
 		case IMPLICIT_METHOD:
@@ -589,7 +592,7 @@ ComputeExternalForces()
 {
 	// Add Gravity forces
 	for(int i=0;i<mNumVertices;i++)
-		mExternalForces[3*i+1] = -9.81;
+		mExternalForces[3*i+1] += -9.81;
 	
 	mExternalForces = mMassMatrix * mExternalForces;
 }

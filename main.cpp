@@ -77,6 +77,8 @@ Joint* selectedJoint;
 FEM::World*	mSoftWorld;
 Cloth* mCloth;
 
+double world_timestep = 1.0/300.0;
+
 // >< 눈
 void eye(double rad) {
 	glPushMatrix();
@@ -119,7 +121,6 @@ std::vector< glm::mat4 > getCube(float width, float height, float thick, float o
 	width = width / 2;
 	thick = thick / 2;
 	glm::mat4 mat = glm::mat4(1.0f);
-	mat = glm::translate(mat, glm::vec3(offsetx, offsety, offsetz));
 	std::vector< glm::mat4 > ret;
 	ret.push_back(glm::translate(mat, glm::vec3( width, 0.0f, thick)));
 	ret.push_back(glm::translate(mat, glm::vec3(-width, 0.0f, thick)));
@@ -129,6 +130,7 @@ std::vector< glm::mat4 > getCube(float width, float height, float thick, float o
 	ret.push_back(glm::translate(mat, glm::vec3( width, height,-thick)));
 	ret.push_back(glm::translate(mat, glm::vec3(-width, height,-thick)));
 	ret.push_back(glm::translate(mat, glm::vec3(-width, height, thick)));
+	mat = glm::translate(mat, glm::vec3(offsetx, offsety, offsetz));
 	return ret;
 }
 
@@ -541,6 +543,7 @@ void drawBVHJoint(Joint* current) {
 int drawIdx = 0;
 std::vector<std::vector<float> > frames;
 int prevfi = -1;
+int frameC = 0;
 
 void drawBVH() {
 	BVH* current = bvh;
@@ -663,12 +666,17 @@ void drawBVH() {
 //	glutPostRedisplay();
 }
 
+std::map< std::string, std::vector< glm::mat4 >  > PreVersMap;
+
 void drawWorld() {
+
 	BVH* current = bvh;
 	frameCur = bvh->frames[0];
+	
 	//if (drawIdx == frames.size()) drawIdx = 0;
 
 	fsm.idle();
+	/*
 	if(fsm.isInterpolate) {
 		if(fsm.frameIndex != prevfi)
 			printf("state: %d->%d, frameIndex: %d/%lu, command: '%c'\n", fsm.stateCur, fsm.stateNext, fsm.frameIndex, fsm.getMotion().size(), Camera::command);
@@ -676,7 +684,9 @@ void drawWorld() {
 		if(fsm.frameIndex != prevfi)
 			printf("state: %d, frameIndex: %d/%lu, command: '%c'\n", fsm.stateCur, fsm.frameIndex, fsm.getMotion().size(), Camera::command);
 	}
+	*/
 	prevfi = fsm.frameIndex;
+	//fsm.frameIndex = 0;
 	frameCur = fsm.getFrame();
 
 	jointIndex = 0;
@@ -696,10 +706,14 @@ void drawWorld() {
 
 	glPushMatrix();
 
+	printf("CLOTH DRAW -------\n");
 	const auto& particles = mSoftWorld->mX;
 	for(int i = 0; i < particles.size()/3; i++) {
 		auto p = particles.block<3,1>(3*i,0);
 		glColor3f(0.35f, 0.80f, 0.35f);
+		if(i > 90 && i < 110) {
+			glColor3f(0.89f, 0.80f, 0.35f);
+		}
 		glBegin(GL_POINTS);
 		glPointSize(100.0f);
 		glVertex3d(p[0], p[1], p[2]);
@@ -710,13 +724,119 @@ void drawWorld() {
 	}
 
 	printf("JOINT CHECK -------\n");
+	
+	class p {
+	public:
+		double x, y, z;
+		p()
+		{}
+		p(double x, double y, double z)
+		:x(x), y(y), z(z)
+		{}
+		double operator*(p b) {
+			return x*b.x + y*b.y + z*b.z;
+		}
+		double sz() {
+			return x*x + y*y + z*z;
+		}
+		void normalize() {
+			double s = sqrt(sz());
+			if(s < 1e-9) return;
+			x /= s; y /= s; z /= s;
+		}
+		p operator^(p b) {
+			return p(y*b.z - z*b.y, -x*b.z + z*b.x, x*b.y - y*b.x);
+		}
+		p operator*(double c) {
+			return p(x*c, y*c, z*c);
+		}
+		p operator+(p b) {
+			return p(x + b.x, y + b.y, z + b.z);
+		}
+		p operator-(p b) {
+			return p(x - b.x, y - b.y, z - b.z);
+		}
+	};
+	int ridx[6][3] = {
+		{0, 1, 2}, {4, 5, 6}, {3, 5, 4}, {3, 2, 6}, {2, 1, 7}, {0, 4, 7}
+	};
+
+	std::map< std::string, std::vector< glm::mat4 >  > CurVersMap;
 	for(auto const& x : current->jointMap) {
 		auto* joint = x.second;
 		std::vector< glm::mat4 > vers = getJointRect(joint);
+		CurVersMap.insert(std::make_pair(x.first, vers));
+	}
+
+	if(PreVersMap.empty()) {
+		std::cout << "prev empty\n";
+		PreVersMap = CurVersMap;
+	}
+
+	int maxCount = int(bvh->frameTime/world_timestep);
+	
+	for(int timecount = 1; timecount <= int(bvh->frameTime/world_timestep); timecount++){
+		for(auto const& x : current->jointMap) {
+			auto* joint = x.second;
+			std::vector< glm::mat4 >& vers1 = PreVersMap[x.first], &vers2 = CurVersMap[x.first];
+			if(vers1.size()!=vers2.size() || vers1.empty() || vers2.empty()) continue;
+			std::vector< glm::mat4 > vers;
+			vers.resize(8);
+			for(int i = 0; i < 8; i++) {
+				for(int j = 0; j < 3; j++) {
+					vers[i][3][j] = (vers1[i][3][j] * (maxCount - timecount) / maxCount + vers2[i][3][j] * timecount / maxCount);
+				}
+			}
+			for(int i = 0; i < particles.size()/3; i++) {
+				bool in = true;
+				double dis = 1e9;
+				p pn;
+				auto pb = particles.block<3,1>(3*i, 0);
+				double x = pb[0], y = pb[1], z = pb[2];
+				for(int j = 0; j < 6; j++) {
+					p A(vers[ridx[j][0]][3][0], vers[ridx[j][0]][3][1], vers[ridx[j][0]][3][2]),
+					  B(vers[ridx[j][1]][3][0], vers[ridx[j][1]][3][1], vers[ridx[j][1]][3][2]),
+					  C(vers[ridx[j][2]][3][0], vers[ridx[j][2]][3][1], vers[ridx[j][2]][3][2]);
+					//A=A*10000; B=B*10000; C=C*10000;
+					double a, b, c, d;
+					p N = (C - B) ^ (A - B);
+					a = N.x; b = N.y; c = N.z;
+					d = -A.x*a - A.y*b - A.z*c;
+					if (a*x + b*y + c*z + d >= 0.0) {
+						in = false;
+						break;
+					}
+					double w = abs(a*x + b*y + c*z + d) / sqrt(a*a + b*b + c*c);
+					if (w < dis) {
+						dis = w;
+						pn = p(a,b,c);
+					}
+				}
+				if (in) {
+					pn.normalize();
+					std::cout << "collision : " << i << "move to " << pn.x << ", " << pn.y << ", " << pn.z << " with dist " << dis << "\n";
+					
+					mSoftWorld->mX[3*i] += dis*pn.x * 2.0;
+					mSoftWorld->mX[3*i+1] += dis*pn.y * 2.0;
+					mSoftWorld->mX[3*i+2] += dis*pn.z * 2.0;
+					mSoftWorld->mExternalForces[3*i] += dis*pn.x * 20000.0;
+					mSoftWorld->mExternalForces[3*i+1] += dis*pn.y * 20000.0;
+					mSoftWorld->mExternalForces[3*i+2] += dis*pn.z * 20000.0;
+				}
+			}
+		}
+		mSoftWorld->TimeStepping();
+	}
+
+	for(auto const& x : current->jointMap) {
+		auto* joint = x.second;
+		std::vector< glm::mat4 > vers = getJointRect(joint);
+		/*
 		std::cout << "JOINT " << joint->name << std::endl;
 		if(vers.size() > 0) {
 			std::cout << vers[0][3][0] << ", "<< vers[0][3][1] << ", " << vers[0][3][2] << std::endl;
 		}
+		*/
 		for(auto ver : vers) {
 			auto p = ver[3];
 			glColor3f(0.35f, 0.35f, 0.80f);
@@ -724,9 +844,36 @@ void drawWorld() {
 			glutSolidSphere(handRad, slice, 10);
 			glTranslated(-p[0], -p[1], -p[2]);
 		}
+		if (vers.size() != 8) {
+			std::cout << "vers size == " << vers.size() << std::endl;
+			continue;
+		} else {
+			glColor3f(0.1f, 0.1f, 0.1f);
+			glBegin( GL_QUADS );
+			glVertex3f(vers[0][3][0], vers[0][3][1], vers[0][3][2]);
+			glVertex3f(vers[1][3][0], vers[1][3][1], vers[1][3][2]);
+			glVertex3f(vers[2][3][0], vers[2][3][1], vers[2][3][2]);
+			glVertex3f(vers[3][3][0], vers[3][3][1], vers[3][3][2]);
+			glVertex3f(vers[4][3][0], vers[4][3][1], vers[4][3][2]);
+			glVertex3f(vers[5][3][0], vers[5][3][1], vers[5][3][2]);
+			glVertex3f(vers[6][3][0], vers[6][3][1], vers[6][3][2]);
+			glVertex3f(vers[7][3][0], vers[7][3][1], vers[7][3][2]);
+			glEnd();
+			glColor3f(0.1f, 0.1f, 0.1f);
+			glBegin( GL_QUADS );
+			glVertex3f(vers[0][3][0], vers[0][3][1], vers[0][3][2]);
+			glVertex3f(vers[3][3][0], vers[3][3][1], vers[3][3][2]);
+			glVertex3f(vers[5][3][0], vers[5][3][1], vers[5][3][2]);
+			glVertex3f(vers[4][3][0], vers[4][3][1], vers[4][3][2]);
+			glVertex3f(vers[1][3][0], vers[1][3][1], vers[1][3][2]);
+			glVertex3f(vers[7][3][0], vers[7][3][1], vers[7][3][2]);
+			glVertex3f(vers[6][3][0], vers[6][3][1], vers[6][3][2]);
+			glVertex3f(vers[2][3][0], vers[2][3][1], vers[2][3][2]);
+			glEnd();
+		}
 	}
-	
 
+	PreVersMap = CurVersMap;
 	glPopMatrix();
 
 	glPopMatrix();
@@ -734,7 +881,6 @@ void drawWorld() {
 	glutSwapBuffers();
 	//std::cout << camera.movement.x << " " << camera.movement.y << " " << camera.movement.z << std::endl;
 	camera.movement = glm::vec3(0.0f, 0.0f, 0.0f);
-	mSoftWorld->TimeStepping();
 }
 
 void initParam() {
@@ -760,7 +906,7 @@ int main(int argc, char **argv) {
 		FEM::IntegrationMethod::PROJECTIVE_DYNAMICS,	//Integration Method
 		FEM::OptimizationMethod::OPTIMIZATION_METHOD_NEWTON,
 		FEM::LinearSolveType::SOLVER_TYPE_LDLT,
-		1.0/10.0,										//time_step
+		world_timestep,										//time_step
 		100, 											//max_iteration	
 		0.99											//damping_coeff
 		);
@@ -773,7 +919,7 @@ int main(int argc, char **argv) {
 
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
 	glutInitWindowSize(800, 600);
-	glutCreateWindow("Animation HW5 2018-23598, 2017-25969");
+	glutCreateWindow("Animation HW6 2018-23598, 2017-25969");
 
 	glutSpecialFunc(camera.specialKeyboardHandler);
 	glutKeyboardFunc(camera.keyboardHandler);

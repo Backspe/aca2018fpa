@@ -12,6 +12,8 @@ public:
 	GridMesh(const int& w_num, const int& h_num,
 		const double& w_length, const double& h_length,
 		const Eigen::Vector3d& origin,
+		const Eigen::Vector3d& w_orientation,
+		const Eigen::Vector3d& h_orientation,
 		const Eigen::Affine3d& T = Eigen::Affine3d::Identity());
 };
 };
